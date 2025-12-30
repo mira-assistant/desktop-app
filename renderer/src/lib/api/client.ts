@@ -1,12 +1,14 @@
 import axios from 'axios';
 
 const PROD_URL = 'https://vyl7ozve5sbobqeg2hbiik3gzu0vqbio.lambda-url.us-east-1.on.aws';
-const API_PREFIX = '/api/v2';
+const API_PREFIX = '/api/v1';
 
 // Use dev URL if environment variable is set, otherwise use prod
-const baseURL = process.env.NEXT_PUBLIC_DEV_URL
-  ? `${process.env.NEXT_PUBLIC_DEV_URL}${API_PREFIX}`
-  : `${PROD_URL}${API_PREFIX}`;
+// const baseURL = process.env.NEXT_PUBLIC_DEV_URL
+//   ? `${process.env.NEXT_PUBLIC_DEV_URL}${API_PREFIX}`
+//   : `${PROD_URL}${API_PREFIX}`;
+
+const baseURL = 'http://localhost:8000' + API_PREFIX;
 
 // Create the Axios instance
 export const api = axios.create({

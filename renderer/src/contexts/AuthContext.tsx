@@ -3,21 +3,21 @@
 import { createContext, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api/client';
+import { authApi } from '@/lib/api/auth';
 import { User, AuthTokens, LoginCredentials, RegisterData } from '@/types/auth.types';
 
 interface AuthContextType {
-  user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
+  setTokensAndUser: (newTokens: AuthTokens) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
   const [tokens, setTokens] = useState<AuthTokens | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -39,29 +39,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (error) => {
         const originalRequest = error.config;
 
+        // If 401 and we haven't retried, try to refresh token
         if (error.response?.status === 401 && !originalRequest._retry && tokens?.refreshToken) {
           originalRequest._retry = true;
 
           try {
-            const { data } = await api.post('/auth/refresh', {
-              refresh_token: tokens.refreshToken,
-            });
+            // Use authApi to refresh
+            const refreshResponse = await authApi.refresh(tokens.refreshToken);
 
             const newTokens: AuthTokens = {
-              accessToken: data.access_token,
-              refreshToken: data.refresh_token || tokens.refreshToken,
+              accessToken: refreshResponse.access_token,
+              refreshToken: refreshResponse.refresh_token || tokens.refreshToken,
             };
 
-            // Store new tokens in Electron
+            // Store new tokens in Electron keychain
             if (window.electronAPI) {
               await window.electronAPI.storeTokens(newTokens.accessToken, newTokens.refreshToken);
             }
 
             setTokens(newTokens);
-            originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
 
+            // Retry original request with new token
+            originalRequest.headers.Authorization = `Bearer ${newTokens.accessToken}`;
             return api(originalRequest);
           } catch (refreshError) {
+            // Refresh failed, logout user
             await logout();
             return Promise.reject(refreshError);
           }
@@ -91,8 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
 
             // TODO: Optionally fetch user data from API
-            // const { data } = await api.get('/auth/me');
-            // setUser(data.user);
+            // You could add a /auth/me endpoint and call it here
+            // const userData = await authApi.me();
+            // setUser(userData);
           }
         }
       } catch (error) {
@@ -105,85 +108,95 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
   }, []);
 
-  // Handle app closing - clear tokens if needed
-  useEffect(() => {
-    if (window.electronAPI) {
-      window.electronAPI.onAppClosing(() => {
-        // Optionally clear tokens on app close
-        // window.electronAPI.clearTokens();
-      });
-    }
-  }, []);
-
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
-      const { data } = await api.post('/auth/login', credentials);
+      // Use authApi.login
+      const response = await authApi.login(credentials);
 
       const newTokens: AuthTokens = {
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
+        accessToken: response.access_token,
+        refreshToken: response.refresh_token,
       };
 
       // Store tokens in Electron keychain
       if (window.electronAPI) {
-        const result = await window.electronAPI.storeTokens(newTokens.accessToken, newTokens.refreshToken);
+        const result = await window.electronAPI.storeTokens(
+          newTokens.accessToken,
+          newTokens.refreshToken
+        );
         if (!result.success) {
           throw new Error('Failed to securely store tokens');
         }
       }
 
       setTokens(newTokens);
-      setUser(data.user);
 
       router.push('/');
     } catch (error: any) {
-      throw new Error(error.response?.data?.detail || 'Login failed');
+      console.error('Login error:', error);
+      throw new Error(error.response?.data?.detail || error.message || 'Login failed');
     }
   }, [router]);
 
   const register = useCallback(async (data: RegisterData) => {
     try {
-      const response = await api.post('/auth/register', data);
+      // Use authApi.register
+      const response = await authApi.register(data);
 
       const newTokens: AuthTokens = {
-        accessToken: response.data.access_token,
-        refreshToken: response.data.refresh_token,
+        accessToken: response.access_token,
+        refreshToken: response.refresh_token,
       };
 
       // Store tokens in Electron keychain
       if (window.electronAPI) {
-        const result = await window.electronAPI.storeTokens(newTokens.accessToken, newTokens.refreshToken);
+        const result = await window.electronAPI.storeTokens(
+          newTokens.accessToken,
+          newTokens.refreshToken
+        );
         if (!result.success) {
           throw new Error('Failed to securely store tokens');
         }
       }
 
       setTokens(newTokens);
-      setUser(response.data.user);
+
+      router.push('/');
     } catch (error: any) {
-      throw new Error(error.response?.data?.detail || 'Registration failed');
+      console.error('Registration error:', error);
+      throw new Error(error.response?.data?.detail || error.message || 'Registration failed');
     }
   }, [router]);
 
   const logout = useCallback(async () => {
-    // Clear tokens from Electron keychain
-    if (window.electronAPI) {
-      await window.electronAPI.clearTokens();
-    }
+    try {
+      // Clear tokens from Electron keychain
+      if (window.electronAPI) {
+        await window.electronAPI.clearTokens();
+      }
 
-    setTokens(null);
-    setUser(null);
+      setTokens(null);
+
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  }, [router]);
+
+  const setTokensAndUser = useCallback((newTokens: AuthTokens) => {
+    setTokens(newTokens);
+    router.push('/');
   }, [router]);
 
   return (
     <AuthContext.Provider
       value={{
-        user,
         isAuthenticated: !!tokens,
         isLoading,
         login,
         register,
         logout,
+        setTokensAndUser,
       }}
     >
       {children}

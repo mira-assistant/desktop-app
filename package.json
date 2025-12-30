@@ -3,8 +3,11 @@
   "version": "1.0.1",
   "main": "dist/main/background.js",
   "scripts": {
-    "dev": "concurrently \"npm run dev:next\" \"npm run dev:electron\"",
+    "dev": "concurrently \"npm run dev:next\" \"npm run dev:electron:watch\"",
     "dev:next": "next dev renderer",
+    "dev:electron:watch": "concurrently \"npm run dev:electron:compile\" \"npm run dev:electron:run\"",
+    "dev:electron:compile": "tsc -p main/tsconfig.json --watch",
+    "dev:electron:run": "wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .",
     "dev:electron": "wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .",
     "build": "npm run build:next && npm run build:electron",
     "build:next": "next build renderer",

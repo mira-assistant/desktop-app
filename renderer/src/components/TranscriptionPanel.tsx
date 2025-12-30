@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Interaction } from '@/types';
+import { Interaction } from '@/types/models.types';
 import { getPersonColor } from '@/lib/colors';
 
 interface TranscriptionPanelProps {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ToastType } from '@/types';
+import { ToastType } from '@/types/models.types';
 import { cn } from '@/lib/cn';
 
 interface ToastProps {

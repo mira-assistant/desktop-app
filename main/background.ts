@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { TokenStorage } from './auth/token-storage';
 import { startWebhookServer, stopWebhookServer } from './webhook-server';
+import { handleGoogleOAuth, handleGitHubOAuth } from './auth/oauth-handler';
 
 const WEBHOOK_PORT = 4280;
 let webhookUrl: string;
@@ -23,11 +24,9 @@ function createWindow() {
 
   // Start webhook server FIRST
   webhookUrl = startWebhookServer(WEBHOOK_PORT, mainWindow);
-  console.log(`[WebHook] Webhook URL: ${webhookUrl}`);
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:3000');
-    mainWindow.webContents.openDevTools(); // Open DevTools
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/out/index.html'));
   }
@@ -84,9 +83,29 @@ ipcMain.handle('auth:has-tokens', async () => {
   }
 });
 
+// OAuth handlers
+ipcMain.handle('auth:google-oauth', async () => {
+  try {
+    const result = await handleGoogleOAuth();
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('Google OAuth handler error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('auth:github-oauth', async () => {
+  try {
+    const code = await handleGitHubOAuth();
+    return { success: true, code };
+  } catch (error: any) {
+    console.error('GitHub OAuth handler error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 app.whenReady().then(() => {
   createWindow();
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();

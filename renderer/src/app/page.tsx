@@ -1,14 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { cn } from '@/lib/cn';
-import StatusIndicator from '@/components/StatusIndicator';
-import Tooltip from '@/components/ui/Tooltip';
+import { useAuth } from '@/hooks/useAuth';
+import LoginOverlay from '@/components/ui/LoginOverlay';
 import MicrophoneButton from '@/components/MicrophoneButton';
 import TranscriptionPanel from '@/components/TranscriptionPanel';
 import Toast from '@/components/ui/Toast';
-import { useAuth } from '@/hooks/useAuth';
-import { ConnectionStatus, Interaction, ToastType } from '@/types';
+import { Interaction, ToastType } from '@/types/models.types';
 
 interface ToastMessage {
   id: string;
@@ -17,6 +15,8 @@ interface ToastMessage {
 }
 
 export default function Home() {
+  const { isAuthenticated, isLoading, logout } = useAuth();
+
   // Audio state
   const [isListening, setIsListening] = useState(false);
   const [micStatusText, setMicStatusText] = useState('Click to start listening');
@@ -31,41 +31,11 @@ export default function Home() {
   // Toast notifications
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const { logout } = useAuth();
-
-  // Features data
-  const features = [
-    {
-      icon: 'fa-brain',
-      name: 'Advanced NLP Processing',
-      description: 'Intelligent text analysis and context understanding',
-    },
-    {
-      icon: 'fa-users',
-      name: 'Speaker Clustering',
-      description: 'Automatically identify and separate different speakers',
-    },
-    {
-      icon: 'fa-clipboard-list',
-      name: 'Context Summarization',
-      description: 'Generate concise summaries of conversations',
-    },
-    {
-      icon: 'fa-database',
-      name: 'Database Integration',
-      description: 'Seamlessly store and search interaction history',
-    },
-  ];
-
   // Handlers
   const handleMicClick = () => {
     console.log('Mic clicked');
     setIsListening(!isListening);
     setMicStatusText(isListening ? 'Click to start listening' : 'Listening... Click to stop');
-  };
-
-  const handleLogout = () => {
-    logout();
   };
 
   const handleClientNameChange = (name: string) => {
@@ -95,8 +65,23 @@ export default function Home() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-[#00ff88] to-[#00cc6a]">
+        <div className="flex flex-col items-center gap-4">
+          <i className="fas fa-microphone-alt text-6xl text-white animate-pulse" />
+          <p className="text-white text-xl font-medium">Loading Mira...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-screen bg-[rgba(255,255,255,0.95)] backdrop-blur-[10px] border border-[rgba(0,255,136,0.2)]">
+    <div className="flex flex-col h-screen bg-[rgba(255,255,255,0.95)] backdrop-blur-[2px] border border-[rgba(0,255,136,0.2)]">
+      {/* Login Overlay - shows when not authenticated */}
+      {!isAuthenticated && <LoginOverlay />}
+
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-[#f0fffa] to-[#e6fffa] border-b border-[#80ffdb] shadow-[0_2px_10px_rgba(0,255,136,0.1)]">
         {/* Logo */}
@@ -129,7 +114,7 @@ export default function Home() {
 
           {/* Logout Button */}
           <button
-            onClick={handleLogout}
+            onClick={logout}
             className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-[#fef2f2] to-[#fee2e2] border border-[#fca5a5] text-[#dc2626] transition-all duration-200 hover:from-[#fee2e2] hover:to-[#fecaca] hover:border-[#dc2626] hover:-translate-y-0.5 hover:shadow-md"
             title="Logout"
           >
@@ -140,40 +125,16 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="flex-1 flex overflow-hidden">
-        {/* Left Section */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-[60px] px-10 py-10 bg-gradient-to-br from-[#f0fffa] to-[#f0fffa]">
-          {/* Microphone Button */}
+        {/* Left Section - Microphone */}
+        <div className="flex-1 flex items-center justify-center px-10 py-10 bg-gradient-to-br from-[#f0fffa] to-[#f0fffa]">
           <MicrophoneButton
             isListening={isListening}
             statusText={micStatusText}
             onClick={handleMicClick}
           />
-
-          {/* Features Card */}
-          <div className="w-full bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.1)] border border-[#e5e7eb] p-6">
-            <h3 className="text-xl font-semibold text-[#1f2937] mb-4">Features</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {features.map((feature, index) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-3 p-3 border border-[#e5e7eb] rounded-lg bg-[rgba(240,255,250,0.5)] transition-all duration-200 min-h-[60px] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,255,136,0.15)] hover:border-[#00ff88]"
-                >
-                  <i className={`fas ${feature.icon} text-[#00ff88] text-base w-5 text-center mt-0.5 flex-shrink-0`} />
-                  <div className="flex flex-col gap-1 flex-1 min-w-0">
-                    <span className="font-poppins font-semibold text-[#1f2937] text-base leading-tight">
-                      {feature.name}
-                    </span>
-                    <span className="text-[13px] text-[#6b7280] leading-snug">
-                      {feature.description}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
-        {/* Right Section */}
+        {/* Right Section - Transcriptions */}
         <div className="flex-1 flex flex-col min-w-0">
           <TranscriptionPanel
             interactions={interactions}
