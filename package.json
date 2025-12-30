@@ -2,13 +2,12 @@
   "name": "desktop-client2",
   "version": "0.1.0",
   "main": "dist/main/background.js",
-  "private": true,
   "scripts": {
     "dev": "concurrently \"npm run dev:next\" \"npm run dev:electron\"",
-    "dev:next": "next dev",
+    "dev:next": "next dev renderer",
     "dev:electron": "wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .",
     "build": "npm run build:next && npm run build:electron",
-    "build:next": "next build",
+    "build:next": "next build renderer",
     "build:electron": "tsc -p main/tsconfig.json",
     "start": "npm run build && electron .",
     "package": "npm run build && electron-builder"
