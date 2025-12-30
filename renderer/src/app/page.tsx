@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { cn } from '@/lib/utils/cn';
+import { cn } from '@/lib/cn';
 import StatusIndicator from '@/components/StatusIndicator';
 import Tooltip from '@/components/ui/Tooltip';
 import MicrophoneButton from '@/components/MicrophoneButton';
 import TranscriptionPanel from '@/components/TranscriptionPanel';
 import Toast from '@/components/ui/Toast';
+import { useAuth } from '@/hooks/useAuth';
 import { ConnectionStatus, Interaction, ToastType } from '@/types';
 
 interface ToastMessage {
@@ -16,12 +17,6 @@ interface ToastMessage {
 }
 
 export default function Home() {
-  // Connection state
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
-  const [statusText, setStatusText] = useState('Disconnected');
-  const [backendUrl, setBackendUrl] = useState('');
-  const [environment, setEnvironment] = useState<'Dev' | 'Prod'>('Dev');
-
   // Audio state
   const [isListening, setIsListening] = useState(false);
   const [micStatusText, setMicStatusText] = useState('Click to start listening');
@@ -35,6 +30,8 @@ export default function Home() {
 
   // Toast notifications
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const { logout } = useAuth();
 
   // Features data
   const features = [
@@ -67,15 +64,8 @@ export default function Home() {
     setMicStatusText(isListening ? 'Click to start listening' : 'Listening... Click to stop');
   };
 
-  const handleEnvironmentToggle = () => {
-    const newEnv = environment === 'Dev' ? 'Prod' : 'Dev';
-    setEnvironment(newEnv);
-    addToast(`Switched to ${newEnv} environment`, 'info');
-  };
-
   const handleLogout = () => {
-    console.log('Logout clicked');
-    addToast('Logged out successfully', 'success');
+    logout();
   };
 
   const handleClientNameChange = (name: string) => {
@@ -105,8 +95,6 @@ export default function Home() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const isProd = environment === 'Prod';
-
   return (
     <div className="flex flex-col h-screen bg-[rgba(255,255,255,0.95)] backdrop-blur-[10px] border border-[rgba(0,255,136,0.2)]">
       {/* Header */}
@@ -123,31 +111,6 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-6">
-          {/* Environment Toggle */}
-          <button
-            onClick={handleEnvironmentToggle}
-            className={cn(
-              "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5",
-              isProd && "bg-gradient-to-br from-[#fef3c7] to-[#fde68a] border-[#fbbf24]",
-              !isProd && "bg-gradient-to-br from-[#f0f9ff] to-[#e0f2fe] border-[#7dd3fc]"
-            )}
-            title="Toggle Environment (Dev/Prod)"
-          >
-            <i className="fas fa-exchange-alt text-xs text-[#0284c7]" />
-            <span className="text-xs font-semibold min-w-[32px] text-center text-[#0c4a6e]">
-              {environment}
-            </span>
-          </button>
-
-          {/* Logout Button */}
-          <button
-            onClick={handleLogout}
-            className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-[#fef2f2] to-[#fee2e2] border border-[#fca5a5] text-[#dc2626] transition-all duration-200 hover:from-[#fee2e2] hover:to-[#fecaca] hover:border-[#dc2626] hover:-translate-y-0.5 hover:shadow-md"
-            title="Logout"
-          >
-            <i className="fas fa-sign-out-alt text-sm" />
-          </button>
-
           {/* Client Name Input */}
           <div className="flex items-center gap-2">
             <label htmlFor="clientName" className="text-sm font-semibold text-[#00cc6a]">
@@ -164,12 +127,14 @@ export default function Home() {
             />
           </div>
 
-          {/* Status Indicator */}
-          <Tooltip content={connectionStatus === 'connected' ? `Backend URL: ${backendUrl}` : 'Not connected to backend'}>
-            <div className="flex items-center gap-2 px-3 py-2 bg-[#f0fffa] border border-[#80ffdb] rounded-[20px]">
-              <StatusIndicator status={connectionStatus} statusText={statusText} />
-            </div>
-          </Tooltip>
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-[#fef2f2] to-[#fee2e2] border border-[#fca5a5] text-[#dc2626] transition-all duration-200 hover:from-[#fee2e2] hover:to-[#fecaca] hover:border-[#dc2626] hover:-translate-y-0.5 hover:shadow-md"
+            title="Logout"
+          >
+            <i className="fas fa-sign-out-alt text-sm" />
+          </button>
         </div>
       </header>
 
@@ -180,7 +145,6 @@ export default function Home() {
           {/* Microphone Button */}
           <MicrophoneButton
             isListening={isListening}
-            isDisabled={connectionStatus !== 'connected'}
             statusText={micStatusText}
             onClick={handleMicClick}
           />

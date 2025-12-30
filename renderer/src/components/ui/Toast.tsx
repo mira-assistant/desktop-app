@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ToastType } from '@/types';
-import { cn } from '@/lib/utils/cn';
+import { cn } from '@/lib/cn';
 
 interface ToastProps {
   message: string;

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Interaction } from '@/types';
-import { getPersonColor } from '@/lib/utils/colors';
+import { getPersonColor } from '@/lib/colors';
 
 interface TranscriptionPanelProps {
   interactions: Interaction[];

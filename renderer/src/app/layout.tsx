@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 export const metadata: Metadata = {
   title: "Mira - AI Assistant",
@@ -25,7 +26,9 @@ export default function RootLayout({
       </head>
       <body className="overflow-hidden h-screen">
         <div className="h-screen bg-gradient-to-br from-[#00ff88] to-[#00cc6a]">
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </div>
       </body>
     </html>

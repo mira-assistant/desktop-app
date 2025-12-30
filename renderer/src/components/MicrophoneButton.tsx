@@ -1,17 +1,15 @@
 'use client';
 
-import { cn } from '@/lib/utils/cn';
+import { cn } from '@/lib/cn';
 
 interface MicrophoneButtonProps {
   isListening: boolean;
-  isDisabled: boolean;
   statusText: string;
   onClick: () => void;
 }
 
 export default function MicrophoneButton({
   isListening,
-  isDisabled,
   statusText,
   onClick,
 }: MicrophoneButtonProps) {
@@ -19,7 +17,6 @@ export default function MicrophoneButton({
     <div className="flex flex-col items-center gap-10">
       <button
         onClick={onClick}
-        disabled={isDisabled}
         className={cn(
           'relative w-40 h-40 rounded-full transition-all duration-300 border-[3px] border-[rgba(255,255,255,0.3)]',
           'flex items-center justify-center',
@@ -32,7 +29,7 @@ export default function MicrophoneButton({
         )}
       >
         {/* Red Ripple Waves - only when listening */}
-        {isListening && !isDisabled && (
+        {isListening && (
           <div className="absolute inset-0 flex pointer-events-none opacity-100 transition-opacity duration-300 hover:opacity-0">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[105%] h-[105%] border-2 border-[rgba(255,68,68,0.6)] rounded-full bg-transparent animate-[redRipple_2s_infinite]" />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[105%] h-[105%] border-2 border-[rgba(255,68,68,0.6)] rounded-full bg-transparent animate-[redRipple_2s_infinite_0.4s]" />
