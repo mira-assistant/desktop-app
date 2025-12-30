@@ -2,26 +2,16 @@
 
 export default function RippleEffect() {
   return (
-    <div className="absolute inset-0 pointer-events-none">
-      <div className="absolute inset-0 rounded-full bg-red-500 opacity-20 animate-ripple" style={{ animationDelay: '0s' }} />
-      <div className="absolute inset-0 rounded-full bg-red-500 opacity-20 animate-ripple" style={{ animationDelay: '0.5s' }} />
-      <div className="absolute inset-0 rounded-full bg-red-500 opacity-20 animate-ripple" style={{ animationDelay: '1s' }} />
-
-      <style jsx>{`
-        @keyframes ripple {
-          0% {
-            transform: scale(1);
-            opacity: 0.2;
-          }
-          100% {
-            transform: scale(1.5);
-            opacity: 0;
-          }
-        }
-        .animate-ripple {
-          animation: ripple 2s ease-out infinite;
-        }
-      `}</style>
+    <div className="absolute inset-0 flex pointer-events-none opacity-100 transition-opacity duration-300">
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[105%] h-[105%] border-2 border-[rgba(255,68,68,0.6)] rounded-full bg-transparent animate-[redRipple_2s_infinite]"
+      />
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[105%] h-[105%] border-2 border-[rgba(255,68,68,0.6)] rounded-full bg-transparent animate-[redRipple_2s_infinite_0.4s]"
+      />
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[105%] h-[105%] border-2 border-[rgba(255,68,68,0.6)] rounded-full bg-transparent animate-[redRipple_2s_infinite_0.8s]"
+      />
     </div>
   );
 }

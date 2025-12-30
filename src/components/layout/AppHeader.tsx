@@ -17,11 +17,9 @@ interface AppHeaderProps {
 
 export default function AppHeader(props: AppHeaderProps) {
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center justify-between">
-        <Logo />
-        <StatusBar {...props} />
-      </div>
+    <header className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-[#f0fffa] to-[#e6fffa] border-b border-[#80ffdb] shadow-[0_2px_10px_rgba(0,255,136,0.1)]">
+      <Logo />
+      <StatusBar {...props} />
     </header>
   );
 }

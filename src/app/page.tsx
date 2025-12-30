@@ -80,7 +80,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="flex flex-col h-screen bg-[rgba(255,255,255,0.95)] backdrop-blur-[10px] border border-[rgba(0,255,136,0.2)]">
       {/* Header */}
       <AppHeader
         connectionStatus={connectionStatus}
@@ -94,9 +94,9 @@ export default function Home() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 flex gap-6 p-6 overflow-hidden">
+      <main className="flex-1 flex overflow-hidden">
         {/* Left Section - Controls */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-8">
+        <div className="flex-1 flex flex-col items-center justify-center gap-[60px] px-10 py-10 bg-gradient-to-br from-[#f0fffa] to-[#f0fffa]">
           {/* Microphone Button */}
           <MicrophoneButton
             isListening={isListening}
@@ -106,7 +106,7 @@ export default function Home() {
           />
 
           {/* Features Card */}
-          <div className="w-full max-w-md">
+          <div className="w-full">
             <FeaturesCard />
           </div>
         </div>

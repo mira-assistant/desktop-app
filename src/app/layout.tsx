@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Mira - AI Assistant",
@@ -21,8 +18,16 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
         />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Montserrat:wght@400;700&family=Poppins:wght@400;600&display=swap"
+        />
       </head>
-      <body className={inter.className}>{children}</body>
+      <body className="overflow-hidden h-screen">
+        <div className="h-screen bg-gradient-to-br from-[#00ff88] to-[#00cc6a]">
+          {children}
+        </div>
+      </body>
     </html>
   );
 }
