@@ -1,12 +1,17 @@
 {
   "name": "desktop-client2",
   "version": "0.1.0",
+  "main": "dist/main/background.js",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "dev": "concurrently \"npm run dev:next\" \"npm run dev:electron\"",
+    "dev:next": "next dev",
+    "dev:electron": "wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .",
+    "build": "npm run build:next && npm run build:electron",
+    "build:next": "next build",
+    "build:electron": "tsc -p main/tsconfig.json",
+    "start": "npm run build && electron .",
+    "package": "npm run build && electron-builder"
   },
   "dependencies": {
     "next": "16.1.1",
@@ -18,9 +23,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.3"
   }
 }

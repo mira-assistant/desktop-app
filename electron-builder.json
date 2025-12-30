@@ -1,0 +1,24 @@
+{
+    "appId": "com.yourcompany.desktop-client2",
+    "productName": "Desktop Client",
+    "files": [
+      "dist/**/*",
+      "out/**/*"
+    ],
+    "directories": {
+      "buildResources": "resources",
+      "output": "release"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "resources/icon.png"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "resources/icon.png"
+    }
+  }
