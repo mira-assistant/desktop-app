@@ -3,6 +3,7 @@ import * as keytar from 'keytar';
 const SERVICE_NAME = 'mira-desktop';
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
+const CLIENT_NAME_KEY = 'client_name';
 
 export class TokenStorage {
   /**
@@ -78,5 +79,26 @@ export class TokenStorage {
   static async hasTokens(): Promise<boolean> {
     const refreshToken = await TokenStorage.getRefreshToken();
     return !!refreshToken;
+  }
+
+  /**
+ * Store client name
+ */
+  static async storeClientName(clientName: string): Promise<void> {
+    await keytar.setPassword(SERVICE_NAME, CLIENT_NAME_KEY, clientName);
+  }
+
+  /**
+   * Get client name
+   */
+  static async getClientName(): Promise<string | null> {
+    return await keytar.getPassword(SERVICE_NAME, CLIENT_NAME_KEY);
+  }
+
+  /**
+   * Clear client name
+   */
+  static async clearClientName(): Promise<void> {
+    await keytar.deletePassword(SERVICE_NAME, CLIENT_NAME_KEY);
   }
 }

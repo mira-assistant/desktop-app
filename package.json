@@ -1,7 +1,7 @@
 {
   "name": "desktop-client2",
   "version": "1.0.1",
-  "main": "dist/main/background.js",
+  "main": "dist/main/main/background.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:next\" \"npm run dev:electron:watch\"",
     "dev:next": "next dev renderer",
@@ -19,9 +19,9 @@
     "clsx": "^2.1.1",
     "express": "^5.2.1",
     "keytar": "^7.9.0",
-    "next": "16.1.1",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
+    "next": "^16.1.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {

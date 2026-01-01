@@ -1,5 +1,6 @@
 import { api } from './client';
-import { getClientIpAddresses, retryWithBackoff } from './utils';
+import { getClientIpAddresses, retryWithBackoff, buildEndpoint } from './utils';
+import { ENDPOINTS } from './constants';
 
 // Types
 interface ClientRegistration {
@@ -33,7 +34,7 @@ export const serviceApi = {
       },
     };
 
-    const { data } = await api.post<ClientResponse>('/service/clients', registration);
+    const { data } = await api.post<ClientResponse>(ENDPOINTS.SERVICE_CLIENTS, registration);
     return data;
   },
 
@@ -42,8 +43,20 @@ export const serviceApi = {
    * DELETE /api/v2/service/clients/{client_id}
    */
   async deregisterClient(clientId: string): Promise<void> {
-    const endpoint = `/service/clients/${encodeURIComponent(clientId)}`;
+    const endpoint = buildEndpoint(ENDPOINTS.SERVICE_CLIENT_BY_ID, { clientId });
     await api.delete(endpoint);
+  },
+
+  /**
+ * Rename client
+ * PATCH /api/v2/service/clients/{client_id}/rename
+ */
+  async renameClient(oldClientId: string, newClientId: string): Promise<ClientResponse> {
+    const { data } = await api.patch<ClientResponse>(
+      `/service/clients/${encodeURIComponent(oldClientId)}/rename`,
+      { new_client_id: newClientId }
+    );
+    return data;
   },
 
   /**
@@ -55,7 +68,7 @@ export const serviceApi = {
     total_count: number;
     network_id: string;
   }> {
-    const { data } = await api.get('/service/clients');
+    const { data } = await api.get(ENDPOINTS.SERVICE_CLIENTS);
     return data;
   },
 
@@ -64,7 +77,7 @@ export const serviceApi = {
    * PATCH /api/v2/service/network/enable
    */
   async enable(): Promise<void> {
-    await api.patch('/service/network/enable');
+    await api.patch(ENDPOINTS.ENABLE_SERVICE);
   },
 
   /**
@@ -73,7 +86,7 @@ export const serviceApi = {
    */
   async disable(): Promise<void> {
     await retryWithBackoff(
-      () => api.patch('/service/network/disable')
+      () => api.patch(ENDPOINTS.DISABLE_SERVICE)
     );
   },
 };

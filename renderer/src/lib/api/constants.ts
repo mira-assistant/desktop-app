@@ -1,7 +1,7 @@
 export const API_CONFIG = {
     DEV_URL: 'http://localhost:8000',
     PROD_URL: 'https://vyl7ozve5sbobqeg2hbiik3gzu0vqbio.lambda-url.us-east-1.on.aws',
-    API_PREFIX: '/api/v2',
+    API_PREFIX: '/api/v1',
 
     TIMEOUTS: {
       DEFAULT: 10000,
@@ -22,12 +22,16 @@ export const API_CONFIG = {
     AUTH_LOGIN: '/auth/login',
     AUTH_REGISTER: '/auth/register',
     AUTH_REFRESH: '/auth/refresh',
+    AUTH_GOOGLE_URL: '/auth/google/url',
+    AUTH_GOOGLE_CALLBACK: '/auth/google/callback',
+    AUTH_GITHUB_URL: '/auth/github/url',
+    AUTH_GITHUB_EXCHANGE: '/auth/github/exchange',
 
     // Service
-    REGISTER_CLIENT: '/service/client/register/:clientId',
-    DEREGISTER_CLIENT: '/service/client/deregister/:clientId',
-    ENABLE_SERVICE: '/service/enable',
-    DISABLE_SERVICE: '/service/disable',
+    SERVICE_CLIENTS: '/service/clients',
+    SERVICE_CLIENT_BY_ID: '/service/clients/:clientId',
+    ENABLE_SERVICE: '/service/network/enable',
+    DISABLE_SERVICE: '/service/network/disable',
 
     // Interactions
     REGISTER_INTERACTION: '/interactions/register',

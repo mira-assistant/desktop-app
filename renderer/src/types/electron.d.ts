@@ -6,6 +6,8 @@ export interface ElectronAPI {
   onAppClosing: (callback: () => void) => void;
   loginWithGoogle: () => Promise<{ success: boolean; data?: { code: string; state: string }; error?: string }>;
   loginWithGitHub: () => Promise<{ success: boolean; code?: string; error?: string }>;
+  storeClientName: (clientName: string) => Promise<{ success: boolean; error?: string }>;
+  getClientName: () => Promise<{ success: boolean; clientName?: string; error?: string }>;
 }
 
 declare global {

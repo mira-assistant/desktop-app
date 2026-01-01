@@ -104,6 +104,26 @@ ipcMain.handle('auth:github-oauth', async () => {
   }
 });
 
+ipcMain.handle('client:store-name', async (_, clientName: string) => {
+  try {
+    await TokenStorage.storeClientName(clientName);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error storing client name:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('client:get-name', async () => {
+  try {
+    const clientName = await TokenStorage.getClientName();
+    return { success: true, clientName };
+  } catch (error: any) {
+    console.error('Error getting client name:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 app.whenReady().then(() => {
   createWindow();
   app.on('activate', () => {

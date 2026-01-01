@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import LoginOverlay from '@/components/ui/LoginOverlay';
+import Header from '@/components/Header';
 import MicrophoneButton from '@/components/MicrophoneButton';
 import TranscriptionPanel from '@/components/TranscriptionPanel';
 import Toast from '@/components/ui/Toast';
@@ -15,7 +16,7 @@ interface ToastMessage {
 }
 
 export default function Home() {
-  const { isAuthenticated, isLoading, logout } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   // Audio state
   const [isListening, setIsListening] = useState(false);
@@ -25,9 +26,6 @@ export default function Home() {
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [personIndexMap] = useState(new Map<string, number>());
 
-  // Client state
-  const [clientName, setClientName] = useState('desktop-client');
-
   // Toast notifications
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -36,19 +34,6 @@ export default function Home() {
     console.log('Mic clicked');
     setIsListening(!isListening);
     setMicStatusText(isListening ? 'Click to start listening' : 'Listening... Click to stop');
-  };
-
-  const handleClientNameChange = (name: string) => {
-    if (name && name.trim() !== '') {
-      setClientName(name.trim());
-      addToast(`Client name updated to: ${name.trim()}`, 'info');
-    }
-  };
-
-  const handleClientNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleClientNameChange(e.currentTarget.value);
-    }
   };
 
   const handleClearTranscriptions = () => {
@@ -79,49 +64,11 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-[rgba(255,255,255,0.95)] backdrop-blur-[2px] border border-[rgba(0,255,136,0.2)]">
-      {/* Login Overlay - shows when not authenticated */}
+      {/* Login Overlay */}
       {!isAuthenticated && <LoginOverlay />}
 
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-[#f0fffa] to-[#e6fffa] border-b border-[#80ffdb] shadow-[0_2px_10px_rgba(0,255,136,0.1)]">
-        {/* Logo */}
-        <div className="flex items-center gap-3">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold text-[#00cc6a]">
-            <i className="fas fa-microphone-alt" />
-            Mira
-          </h1>
-          <span className="px-2 py-0.5 text-xs font-medium text-[#00cc6a] bg-[#e6fffa] rounded-xl">
-            v6.0.1
-          </span>
-        </div>
-
-        <div className="flex items-center gap-6">
-          {/* Client Name Input */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="clientName" className="text-sm font-semibold text-[#00cc6a]">
-              Client Name:
-            </label>
-            <input
-              id="clientName"
-              type="text"
-              defaultValue={clientName}
-              onKeyDown={handleClientNameKeyDown}
-              maxLength={50}
-              placeholder="desktop-client"
-              className="w-[140px] px-2.5 py-1.5 text-sm text-center text-gray-900 bg-[#f0fffa] border border-[#80ffdb] rounded-xl transition-all duration-300 focus:outline-none focus:border-[#00cc6a] focus:bg-white focus:shadow-[0_0_0_2px_rgba(0,204,106,0.2)]"
-            />
-          </div>
-
-          {/* Logout Button */}
-          <button
-            onClick={logout}
-            className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-[#fef2f2] to-[#fee2e2] border border-[#fca5a5] text-[#dc2626] transition-all duration-200 hover:from-[#fee2e2] hover:to-[#fecaca] hover:border-[#dc2626] hover:-translate-y-0.5 hover:shadow-md"
-            title="Logout"
-          >
-            <i className="fas fa-sign-out-alt text-sm" />
-          </button>
-        </div>
-      </header>
+      {/* Header - handles its own state */}
+      <Header />
 
       {/* Main Content */}
       <main className="flex-1 flex overflow-hidden">

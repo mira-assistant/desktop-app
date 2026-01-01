@@ -1,14 +1,15 @@
 import { api } from './client';
 import { LoginCredentials, RegisterData, AuthResponse } from '../../types/auth.types';
+import { ENDPOINTS } from './constants';
 
 export const authApi = {
   /**
-   * Login with username/email and password
+   * Login with email and password
    * POST /api/v2/auth/login
    */
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const { data } = await api.post<AuthResponse>('/auth/login', {
-      username: credentials.username,  // Can be username OR email
+    const { data } = await api.post<AuthResponse>(ENDPOINTS.AUTH_LOGIN, {
+      email: credentials.email,
       password: credentials.password,
     });
     return data;
@@ -19,8 +20,7 @@ export const authApi = {
    * POST /api/v2/auth/register
    */
   register: async (registerData: RegisterData): Promise<AuthResponse> => {
-    const { data } = await api.post<AuthResponse>('/auth/register', {
-      username: registerData.username,
+    const { data } = await api.post<AuthResponse>(ENDPOINTS.AUTH_REGISTER, {
       email: registerData.email,
       password: registerData.password,
     });
@@ -32,7 +32,7 @@ export const authApi = {
    * POST /api/v2/auth/refresh
    */
   refresh: async (refreshToken: string): Promise<AuthResponse> => {
-    const { data } = await api.post<AuthResponse>('/auth/refresh', {
+    const { data } = await api.post<AuthResponse>(ENDPOINTS.AUTH_REFRESH, {
       refresh_token: refreshToken,
     });
     return data;
@@ -43,7 +43,7 @@ export const authApi = {
    * GET /api/v2/auth/google/url
    */
   getGoogleOAuthUrl: async (redirectPort: number = 4280): Promise<{ url: string; state: string }> => {
-    const { data } = await api.get<{ url: string; state: string }>('/auth/google/url', {
+    const { data } = await api.get<{ url: string; state: string }>(ENDPOINTS.AUTH_GOOGLE_URL, {
       params: { redirect_port: redirectPort },
     });
     return data;
@@ -54,7 +54,7 @@ export const authApi = {
    * POST /api/v2/auth/google/callback
    */
   googleCallback: async (code: string, state: string): Promise<AuthResponse> => {
-    const { data } = await api.post<AuthResponse>('/auth/google/callback', {
+    const { data } = await api.post<AuthResponse>(ENDPOINTS.AUTH_GOOGLE_CALLBACK, {
       code,
       state,
     });
@@ -66,7 +66,7 @@ export const authApi = {
    * GET /api/v2/auth/github/url
    */
   getGitHubOAuthUrl: async (redirectPort: number = 4280): Promise<{ url: string; state: string }> => {
-    const { data } = await api.get<{ url: string; state: string }>('/auth/github/url', {
+    const { data } = await api.get<{ url: string; state: string }>(ENDPOINTS.AUTH_GITHUB_URL, {
       params: { redirect_port: redirectPort },
     });
     return data;
@@ -77,7 +77,7 @@ export const authApi = {
    * POST /api/v2/auth/github/exchange
    */
   gitHubExchange: async (code: string): Promise<AuthResponse> => {
-    const { data } = await api.post<AuthResponse>('/auth/github/exchange', {
+    const { data } = await api.post<AuthResponse>(ENDPOINTS.AUTH_GITHUB_EXCHANGE, {
       code,
     });
     return data;

@@ -16,11 +16,11 @@ export default function LoginOverlay() {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const username = formData.get('username') as string;
+    const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
     try {
-      await login({ username, password });
+      await login({ email, password });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -34,7 +34,6 @@ export default function LoginOverlay() {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const username = formData.get('username') as string;
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const confirmPassword = formData.get('confirmPassword') as string;
@@ -52,7 +51,7 @@ export default function LoginOverlay() {
     }
 
     try {
-      await register({ username, email, password });
+      await register({ email, password });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -154,11 +153,11 @@ export default function LoginOverlay() {
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-700">
-                Username or Email
+                Email
               </label>
               <input
-                type="text"
-                name="username"
+                type="email"
+                name="email"
                 required
                 disabled={loading}
                 className="w-full px-4 py-3 bg-white/50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#667eea] transition-colors disabled:opacity-50"
@@ -191,11 +190,11 @@ export default function LoginOverlay() {
           <form onSubmit={handleRegister} className="space-y-5">
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-700">
-                Username
+                Email
               </label>
               <input
-                type="text"
-                name="username"
+                type="email"
+                name="email"
                 required
                 disabled={loading}
                 className="w-full px-4 py-3 bg-white/50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#667eea] transition-colors disabled:opacity-50"

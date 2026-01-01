@@ -26,4 +26,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // OAuth
   loginWithGoogle: () => ipcRenderer.invoke('auth:google-oauth'),
   loginWithGitHub: () => ipcRenderer.invoke('auth:github-oauth'),
+
+  // Client name
+  storeClientName: (clientName: string) => ipcRenderer.invoke('client:store-name', clientName),
+  getClientName: () => ipcRenderer.invoke('client:get-name'),
 });
