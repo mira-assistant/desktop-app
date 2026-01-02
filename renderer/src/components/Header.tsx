@@ -137,9 +137,9 @@ export default function Header() {
         clientListCache.current = [];
         cacheTimestamp.current = 0;
 
-        console.log(`✅ Client renamed to: ${newName}`);
+        console.log(`Client renamed to: ${newName}`);
       } catch (error) {
-        console.error('❌ Failed to update client name:', error);
+        console.error('Failed to update client name:', error);
         setInputValue(clientName); // Revert on failure
       } finally {
         setIsRegistering(false);

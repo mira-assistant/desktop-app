@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return api(originalRequest);
           } catch (refreshError) {
             // Refresh failed, clear everything
-            console.error('❌ Token refresh failed, logging out');
+            console.error('Token refresh failed, logging out');
 
             // Clear tokens from keychain
             if (window.electronAPI) {
@@ -101,8 +101,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const result = await window.electronAPI.getTokens();
 
           if (result.success && result.tokens?.accessToken && result.tokens?.refreshToken) {
-            console.log('🔐 Found stored tokens, verifying...');
-
             try {
               // Verify tokens by attempting refresh
               const refreshResponse = await authApi.refresh(result.tokens.refreshToken);
@@ -120,10 +118,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser(refreshResponse.user);
               setIsAuthenticated(true);
 
-              console.log('✅ Authentication verified');
+              console.log('Authentication verified');
             } catch (refreshError) {
               // Tokens are invalid, clear them
-              console.error('❌ Token verification failed, clearing tokens');
+              console.error('Token verification failed, clearing tokens');
               await window.electronAPI.clearTokens();
               setTokens(null);
               setUser(null);
@@ -131,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           } else {
             // No tokens found
-            console.log('ℹ️ No stored tokens found');
+            console.log('No stored tokens found');
             setIsAuthenticated(false);
           }
         } else {
@@ -174,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(response.user);
       setIsAuthenticated(true);
 
-      console.log('✅ Logged in successfully');
+      console.log('Logged in successfully');
     } catch (error: any) {
       console.error('Login error:', error);
       throw new Error(error.response?.data?.detail || error.message || 'Login failed');
@@ -206,7 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(response.user);
       setIsAuthenticated(true);
 
-      console.log('✅ Registered successfully');
+      console.log('Registered successfully');
     } catch (error: any) {
       console.error('Registration error:', error);
       throw new Error(error.response?.data?.detail || error.message || 'Registration failed');
@@ -215,8 +213,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      console.log('🚪 Logging out...');
-
       // Clear tokens from Electron keychain
       if (window.electronAPI) {
         await window.electronAPI.clearTokens();
@@ -226,7 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setIsAuthenticated(false);
 
-      console.log('✅ Logged out successfully');
+      console.log('Logged out successfully');
     } catch (error) {
       console.error('Logout error:', error);
     }

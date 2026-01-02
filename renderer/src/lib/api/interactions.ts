@@ -9,8 +9,7 @@ export const interactionsApi = {
    * POST /api/v1/interactions/register
    *
    * Returns:
-   * - 202 Accepted: Audio accepted, will receive via webhook
-   * - 204 No Content: Audio rejected (better stream exists)
+   * - 204 Accepted: Audio accepted, will receive via webhook
    *
    * Actual interaction data comes via webhook
    */

@@ -14,7 +14,7 @@
 /coverage
 
 # next.js
-/.next/
+renderer/.next
 /out/
 
 # production

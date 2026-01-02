@@ -55,13 +55,9 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
 
     // Register client when authenticated
     useEffect(() => {
-        if (isAuthLoading) {
-            console.log('⏳ Waiting for auth to load...');
-            return;
-        }
+        if (isAuthLoading) return;
 
         if (!isAuthenticated) {
-            console.log('🔒 Not authenticated, skipping client registration');
             setIsConnected(false);
             return;
         }
@@ -73,17 +69,12 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
             try {
                 const webhookUrl = await window.electronAPI.getWebhookUrl();
 
-                console.log('🔐 Registering client:', {
-                    clientName,
-                    webhookUrl,
-                });
-
                 await serviceApi.registerClient(clientName, webhookUrl);
                 setIsConnected(true);
 
-                console.log(`✅ Client ${clientName} registered`);
+                console.log(`Client ${clientName} registered`);
             } catch (error: any) {
-                console.error('❌ Failed to register client:', error);
+                console.error('Failed to register client:', error);
                 setIsConnected(false);
             }
         };

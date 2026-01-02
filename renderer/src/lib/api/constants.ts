@@ -1,8 +1,4 @@
 export const API_CONFIG = {
-  DEV_URL: 'http://localhost:8000',
-  PROD_URL: 'https://vyl7ozve5sbobqeg2hbiik3gzu0vqbio.lambda-url.us-east-1.on.aws',
-  API_PREFIX: '/api/v1',
-
   TIMEOUTS: {
     DEFAULT: 10000,
     INTERACTION: 30000,

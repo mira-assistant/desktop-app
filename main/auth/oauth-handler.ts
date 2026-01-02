@@ -12,16 +12,37 @@ export async function handleGoogleOAuth(): Promise<{ code: string; state: string
 
     return new Promise((resolve) => {
       const authWindow = new BrowserWindow({
-        width: 600,
+        width: 500,
         height: 700,
         show: true,
+        center: true,
+        resizable: false,
+        minimizable: false,
+        maximizable: false,
+        alwaysOnTop: true,
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true,
-        }
+          // ✅ Modern browser features
+          sandbox: true,
+        },
+        // ✅ Modern window styling
+        titleBarStyle: 'default',
+        backgroundColor: '#ffffff',
+        // ✅ Remove frame for cleaner look (optional)
+        // frame: false,
       });
 
       authWindow.loadURL(url);
+
+      // ✅ Inject CSS to make it look better (optional)
+      authWindow.webContents.on('did-finish-load', () => {
+        authWindow.webContents.insertCSS(`
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+          }
+        `);
+      });
 
       // Listen for navigation to callback URL
       authWindow.webContents.on('will-redirect', (event, redirectUrl) => {
@@ -58,13 +79,21 @@ export async function handleGitHubOAuth(): Promise<string | null> {
 
     return new Promise((resolve) => {
       const authWindow = new BrowserWindow({
-        width: 600,
+        width: 500,
         height: 700,
         show: true,
+        center: true,
+        resizable: false,
+        minimizable: false,
+        maximizable: false,
+        alwaysOnTop: true,
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true,
-        }
+          sandbox: true,
+        },
+        titleBarStyle: 'default',
+        backgroundColor: '#24292e', // GitHub dark theme
       });
 
       authWindow.loadURL(url);
