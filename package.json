@@ -16,6 +16,7 @@
     "package": "npm run build && electron-builder"
   },
   "dependencies": {
+    "@ricky0123/vad-web": "^0.0.30",
     "clsx": "^2.1.1",
     "express": "^5.2.1",
     "keytar": "^7.9.0",

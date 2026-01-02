@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onNewInteraction: (callback: (interaction: any) => void) =>
     ipcRenderer.on('new-interaction', (_, interaction) => callback(interaction)),
 
+  onServiceStatusChanged: (callback: (status: { enabled: boolean }) => void) =>
+    ipcRenderer.on('service-status-changed', (_, status) => callback(status)),
+
   // OAuth
   loginWithGoogle: () => ipcRenderer.invoke('auth:google-oauth'),
   loginWithGitHub: () => ipcRenderer.invoke('auth:github-oauth'),

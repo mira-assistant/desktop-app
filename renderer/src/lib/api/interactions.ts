@@ -1,0 +1,60 @@
+import { api } from './client';
+import { ENDPOINTS, API_CONFIG } from './constants';
+import { buildEndpoint } from './utils';
+import { Interaction } from '@/types/models.types';
+
+export const interactionsApi = {
+  /**
+   * Register interaction from audio
+   * POST /api/v1/interactions/register
+   *
+   * Returns:
+   * - 202 Accepted: Audio accepted, will receive via webhook
+   * - 204 No Content: Audio rejected (better stream exists)
+   *
+   * Actual interaction data comes via webhook
+   */
+  async register(
+    audioData: ArrayBuffer,
+    clientId: string,
+    format: string = 'wav'
+  ): Promise<void> {
+    const formData = new FormData();
+    const blob = new Blob([audioData], { type: `audio/${format}` });
+    formData.append('audio', blob, `audio.${format}`);
+    formData.append('client_id', clientId);
+
+    try {
+      await api.post(
+        ENDPOINTS.INTERACTIONS_REGISTER,
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: API_CONFIG.TIMEOUTS.INTERACTION,
+          validateStatus: (status) => status === 202 || status === 204,
+        }
+      );
+    } catch (error: any) {
+      console.error('Failed to register interaction:', error);
+    }
+  },
+
+  /**
+   * Get interaction by ID
+   * GET /api/v1/interactions/{interaction_id}
+   */
+  async getById(interactionId: string): Promise<Interaction> {
+    const endpoint = buildEndpoint(ENDPOINTS.INTERACTION_BY_ID, { interactionId });
+    const { data } = await api.get<Interaction>(endpoint);
+    return data;
+  },
+
+  /**
+   * Delete interaction
+   * DELETE /api/v1/interactions/{interaction_id}
+   */
+  async delete(interactionId: string): Promise<void> {
+    const endpoint = buildEndpoint(ENDPOINTS.INTERACTION_BY_ID, { interactionId });
+    await api.delete(endpoint);
+  },
+};

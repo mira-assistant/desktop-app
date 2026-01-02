@@ -44,6 +44,7 @@ export function getClientIpAddresses(): ClientIpAddresses {
 
 /**
  * Build endpoint with params replaced
+ * Example: buildEndpoint('/users/:userId', { userId: '123' }) -> '/users/123'
  */
 export function buildEndpoint(
     endpoint: string,

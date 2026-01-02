@@ -1,6 +1,6 @@
 import { api } from './client';
-import { getClientIpAddresses, retryWithBackoff, buildEndpoint } from './utils';
-import { ENDPOINTS } from './constants';
+import { API_CONFIG, ENDPOINTS } from './constants';
+import { buildEndpoint, getClientIpAddresses, retryWithBackoff } from './utils';
 
 // Types
 interface ClientRegistration {
@@ -20,9 +20,9 @@ interface ClientResponse {
 export const serviceApi = {
   /**
    * Register client with network
-   * POST /api/v2/service/clients
+   * POST /api/v1/service/clients
    */
-  async registerClient(clientId: string, webhookUrl: string): Promise<ClientResponse> {
+  async registerClient(clientId: string, webhookUrl?: string): Promise<ClientResponse> {
     const ipAddresses = getClientIpAddresses();
 
     const registration: ClientRegistration = {
@@ -40,7 +40,7 @@ export const serviceApi = {
 
   /**
    * Deregister client from network
-   * DELETE /api/v2/service/clients/{client_id}
+   * DELETE /api/v1/service/clients/{client_id}
    */
   async deregisterClient(clientId: string): Promise<void> {
     const endpoint = buildEndpoint(ENDPOINTS.SERVICE_CLIENT_BY_ID, { clientId });
@@ -48,25 +48,24 @@ export const serviceApi = {
   },
 
   /**
- * Rename client
- * PATCH /api/v2/service/clients/{client_id}/rename
- */
+   * Rename client
+   * PATCH /api/v1/service/clients/{client_id}/rename
+   */
   async renameClient(oldClientId: string, newClientId: string): Promise<ClientResponse> {
-    const { data } = await api.patch<ClientResponse>(
-      `/service/clients/${encodeURIComponent(oldClientId)}/rename`,
-      { new_client_id: newClientId }
-    );
+    const endpoint = buildEndpoint(ENDPOINTS.SERVICE_CLIENT_RENAME, { clientId: oldClientId });
+    const { data } = await api.patch<ClientResponse>(endpoint, {
+      new_client_id: newClientId,
+    });
     return data;
   },
 
   /**
    * List all registered clients
-   * GET /api/v2/service/clients
+   * GET /api/v1/service/clients
    */
   async listClients(): Promise<{
-    clients: ClientResponse[];
+    clients: string[];
     total_count: number;
-    network_id: string;
   }> {
     const { data } = await api.get(ENDPOINTS.SERVICE_CLIENTS);
     return data;
@@ -74,19 +73,19 @@ export const serviceApi = {
 
   /**
    * Enable service for network
-   * PATCH /api/v2/service/network/enable
+   * PATCH /api/v1/service/network/enable
    */
   async enable(): Promise<void> {
-    await api.patch(ENDPOINTS.ENABLE_SERVICE);
+    await api.patch(ENDPOINTS.SERVICE_NETWORK_ENABLE);
   },
 
   /**
    * Disable service for network with retry
-   * PATCH /api/v2/service/network/disable
+   * PATCH /api/v1/service/network/disable
    */
   async disable(): Promise<void> {
     await retryWithBackoff(
-      () => api.patch(ENDPOINTS.DISABLE_SERVICE)
+      () => api.patch(ENDPOINTS.SERVICE_NETWORK_DISABLE)
     );
   },
 };

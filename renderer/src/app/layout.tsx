@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
-import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
-
-export const metadata: Metadata = {
-  title: "Mira - AI Assistant",
-  description: "Voice-enabled AI assistant desktop application",
-};
+import { ServiceProvider } from "@/contexts/ServiceContext";
+import { AudioProvider } from '@/contexts/AudioContext';
+import "./globals.css";
 
 export default function RootLayout({
   children,
@@ -24,12 +20,14 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Montserrat:wght@400;700&family=Poppins:wght@400;600&display=swap"
         />
       </head>
-      <body className="overflow-hidden h-screen">
-        <div className="h-screen bg-gradient-to-br from-[#00ff88] to-[#00cc6a]">
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </div>
+      <body>
+        <AuthProvider>
+          <ServiceProvider>
+            <AudioProvider>
+              {children}
+            </AudioProvider>
+          </ServiceProvider>
+        </AuthProvider>
       </body>
     </html>
   );

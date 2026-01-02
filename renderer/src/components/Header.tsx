@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { serviceApi } from '@/lib/api/service';
 
@@ -12,6 +12,14 @@ export default function Header() {
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+
+  // Cache client list to avoid repeated API calls
+  const clientListCache = useRef<string[]>([]);
+  const cacheTimestamp = useRef<number>(0);
+  const CACHE_DURATION = 30000; // 30 seconds
+
+  // Debounce timer
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Load client name from storage on mount
   useEffect(() => {
@@ -27,20 +35,45 @@ export default function Header() {
     loadClientName();
   }, []);
 
+  // Fetch client list (with caching)
+  const fetchClientList = useCallback(async (): Promise<string[]> => {
+    const now = Date.now();
+
+    // Use cache if still valid
+    if (now - cacheTimestamp.current < CACHE_DURATION && clientListCache.current.length > 0) {
+      return clientListCache.current;
+    }
+
+    // Fetch fresh data
+    try {
+      const response = await serviceApi.listClients();
+      clientListCache.current = response.clients;
+      cacheTimestamp.current = now;
+      return response.clients;
+    } catch (error) {
+      console.error('Failed to fetch client list:', error);
+      return clientListCache.current; // Fall back to old cache
+    }
+  }, []);
+
   // Check if client name is available
-  const checkAvailability = async (name: string) => {
+  const checkAvailability = useCallback(async (name: string) => {
     if (!name || name.trim() === '') {
       setIsAvailable(null);
       return;
     }
 
-    setIsChecking(true);
-    try {
-      const response = await serviceApi.listClients();
-      const existingClients = response.clients.map(c => c.client_id);
+    // Don't check if it's the current name
+    if (name === clientName) {
+      setIsAvailable(null);
+      return;
+    }
 
-      // Name is available if it's not in the list OR it's the current client name
-      const available = !existingClients.includes(name) || name === clientName;
+    setIsChecking(true);
+
+    try {
+      const existingClients = await fetchClientList();
+      const available = !existingClients.includes(name);
       setIsAvailable(available);
     } catch (error) {
       console.error('Failed to check client name availability:', error);
@@ -48,19 +81,35 @@ export default function Header() {
     } finally {
       setIsChecking(false);
     }
-  };
+  }, [clientName, fetchClientList]);
 
+  // Handle input change with proper debouncing
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.trim();
     setInputValue(value);
 
-    // Debounce availability check
-    const timeoutId = setTimeout(() => {
+    // Clear previous timer
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    // Reset availability while typing
+    setIsAvailable(null);
+
+    // Set new debounced check
+    debounceTimer.current = setTimeout(() => {
       checkAvailability(value);
     }, 500);
-
-    return () => clearTimeout(timeoutId);
   };
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, []);
 
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -71,17 +120,9 @@ export default function Header() {
       if (isAvailable === false) return; // Name taken
 
       setIsRegistering(true);
-      try {
-        // Deregister old client
-        if (clientName) {
-          try {
-            await serviceApi.deregisterClient(clientName);
-          } catch (error) {
-            console.warn('Failed to deregister old client:', error);
-          }
-        }
 
-        // Register with new name
+      try {
+        // Rename client
         await serviceApi.renameClient(clientName, newName);
 
         // Store in persistent storage
@@ -90,11 +131,16 @@ export default function Header() {
         }
 
         setClientName(newName);
-        setIsAvailable(null); // Reset indicator
+        setIsAvailable(null);
+
+        // Invalidate cache
+        clientListCache.current = [];
+        cacheTimestamp.current = 0;
+
+        console.log(`✅ Client renamed to: ${newName}`);
       } catch (error) {
-        console.error('Failed to update client name:', error);
-        // Revert input on failure
-        setInputValue(clientName);
+        console.error('❌ Failed to update client name:', error);
+        setInputValue(clientName); // Revert on failure
       } finally {
         setIsRegistering(false);
       }

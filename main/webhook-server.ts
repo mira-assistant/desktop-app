@@ -7,27 +7,34 @@ export function startWebhookServer(port: number, mainWindow: BrowserWindow): str
   const app = express();
   app.use(express.json());
 
-  // Webhook endpoint
-  app.post('/webhook/interaction', (req, res) => {
-    const interaction = req.body;
+  // Main webhook endpoint - handle all webhook events
+  app.post('/webhook', (req, res) => {
+    const event = req.body.event;
 
-    console.log('[WEBHOOK] Received interaction:', interaction);
+    console.log('📥 Webhook received:', event || 'interaction');
 
-    // Send to renderer process
-    mainWindow.webContents.send('new-interaction', interaction);
+    if (event === 'service_status') {
+      // Service status change
+      mainWindow.webContents.send('service-status-changed', req.body);
+    } else {
+      // Default to interaction
+      mainWindow.webContents.send('new-interaction', req.body);
+    }
 
     res.status(200).json({ received: true });
   });
 
-  webhookServer = app.listen();
+  webhookServer = app.listen(port, () => {
+    console.log(`✅ Webhook server listening on port ${port}`);
+  });
 
-  return `http://localhost:${port}/webhook/interaction`;
+  return `http://localhost:${port}/webhook`;
 }
 
 export function stopWebhookServer() {
   if (webhookServer) {
-    console.log('[WEBHOOK] Stopping server...');
     webhookServer.close();
     webhookServer = null;
+    console.log('🛑 Webhook server stopped');
   }
 }

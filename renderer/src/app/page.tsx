@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useService } from '@/hooks/useService';
 import LoginOverlay from '@/components/ui/LoginOverlay';
 import Header from '@/components/Header';
 import MicrophoneButton from '@/components/MicrophoneButton';
 import TranscriptionPanel from '@/components/TranscriptionPanel';
 import Toast from '@/components/ui/Toast';
-import { Interaction, ToastType } from '@/types/models.types';
+import { ToastType } from '@/types/models.types';
 
 interface ToastMessage {
   id: string;
@@ -17,27 +18,13 @@ interface ToastMessage {
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { interactions, clearInteractions } = useService();
 
-  // Audio state
-  const [isListening, setIsListening] = useState(false);
-  const [micStatusText, setMicStatusText] = useState('Click to start listening');
-
-  // Transcription state
-  const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [personIndexMap] = useState(new Map<string, number>());
-
-  // Toast notifications
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Handlers
-  const handleMicClick = () => {
-    console.log('Mic clicked');
-    setIsListening(!isListening);
-    setMicStatusText(isListening ? 'Click to start listening' : 'Listening... Click to stop');
-  };
-
   const handleClearTranscriptions = () => {
-    setInteractions([]);
+    clearInteractions();
     addToast('Cleared transcriptions', 'info');
   };
 
@@ -50,7 +37,6 @@ export default function Home() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  // Show loading while checking auth
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gradient-to-br from-[#00ff88] to-[#00cc6a]">
@@ -64,21 +50,14 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-[rgba(255,255,255,0.95)] backdrop-blur-[2px] border border-[rgba(0,255,136,0.2)]">
-      {/* Login Overlay */}
       {!isAuthenticated && <LoginOverlay />}
 
-      {/* Header - handles its own state */}
       <Header />
 
-      {/* Main Content */}
       <main className="flex-1 flex overflow-hidden">
         {/* Left Section - Microphone */}
         <div className="flex-1 flex items-center justify-center px-10 py-10 bg-gradient-to-br from-[#f0fffa] to-[#f0fffa]">
-          <MicrophoneButton
-            isListening={isListening}
-            statusText={micStatusText}
-            onClick={handleMicClick}
-          />
+          <MicrophoneButton />
         </div>
 
         {/* Right Section - Transcriptions */}
