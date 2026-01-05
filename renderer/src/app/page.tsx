@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useService } from '@/hooks/useService';
 import LoginOverlay from '@/components/ui/LoginOverlay';
 import Header from '@/components/Header';
 import MicrophoneButton from '@/components/MicrophoneButton';
@@ -18,20 +17,7 @@ interface ToastMessage {
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { interactions, clearInteractions } = useService();
-
-  const [personIndexMap] = useState(new Map<string, number>());
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-
-  const handleClearTranscriptions = () => {
-    clearInteractions();
-    addToast('Cleared transcriptions', 'info');
-  };
-
-  const addToast = (message: string, type: ToastType) => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, message, type }]);
-  };
 
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -62,11 +48,7 @@ export default function Home() {
 
         {/* Right Section - Transcriptions */}
         <div className="flex-1 flex flex-col min-w-0">
-          <TranscriptionPanel
-            interactions={interactions}
-            personIndexMap={personIndexMap}
-            onClear={handleClearTranscriptions}
-          />
+          <TranscriptionPanel />
         </div>
       </main>
 

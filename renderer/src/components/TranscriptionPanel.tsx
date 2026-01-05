@@ -1,21 +1,89 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Interaction } from '@/types/models.types';
+import { personsApi } from '@/lib/api/persons';
+import { interactionsApi } from '@/lib/api/interactions';
 import { getPersonColor } from '@/lib/colors';
+import { useService } from '@/hooks/useService';
+import { Person } from '@/types/models.types';
 
-interface TranscriptionPanelProps {
-  interactions: Interaction[];
-  personIndexMap: Map<string, number>;
-  onClear: () => void;
-}
-
-export default function TranscriptionPanel({
-  interactions,
-  personIndexMap,
-  onClear,
-}: TranscriptionPanelProps) {
+export default function TranscriptionPanel() {
+  const { isConnected } = useService();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const [interactions, setInteractions] = useState<Interaction[]>([]);
+  const [persons, setPersons] = useState<Map<string, Person>>(new Map());
+
+  // Load existing interactions when connected
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const loadInteractions = async () => {
+      try {
+        const data = await interactionsApi.getAll();
+        setInteractions(data);
+      } catch (error) {
+        console.error('Failed to load interactions:', error);
+      }
+    };
+
+    loadInteractions();
+  }, [isConnected]);
+
+  // Listen for new interactions via webhook
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    const handleNewInteraction = (interaction: Interaction) => {
+      console.log('📥 New interaction received:', interaction);
+
+      setInteractions(prev => {
+        // Prevent duplicates
+        if (prev.some(i => i.id === interaction.id)) {
+          return prev;
+        }
+        return [...prev, interaction];
+      });
+    };
+
+    window.electronAPI.onNewInteraction(handleNewInteraction);
+  }, []);
+
+  // Fetch person details when new speaker IDs appear
+  useEffect(() => {
+    const fetchMissingPersons = async () => {
+      const speakerIds = new Set(
+        interactions
+          .map(i => i.speaker_id)
+          .filter((id): id is string => id !== null && id !== undefined)
+      );
+
+      const missingIds = Array.from(speakerIds).filter(id => !persons.has(id));
+
+      if (missingIds.length === 0) return;
+
+      try {
+        const fetchedPersons = await Promise.all(
+          missingIds.map(id => personsApi.getById(id).catch(() => null))
+        );
+
+        setPersons(prev => {
+          const newMap = new Map(prev);
+          fetchedPersons.forEach((person, idx) => {
+            if (person) {
+              newMap.set(missingIds[idx], person);
+            }
+          });
+          return newMap;
+        });
+      } catch (error) {
+        console.error('Failed to fetch person details:', error);
+      }
+    };
+
+    fetchMissingPersons();
+  }, [interactions, persons]);
 
   // Auto-scroll to bottom when new interactions arrive
   useEffect(() => {
@@ -24,14 +92,38 @@ export default function TranscriptionPanel({
     }
   }, [interactions]);
 
+  const handleClear = () => {
+    setInteractions([]);
+  };
+
+  const getSpeakerDisplay = (interaction: Interaction): { label: string; index: number } => {
+    if (!interaction.speaker_id) {
+      return { label: 'Unknown Speaker', index: 0 };
+    }
+
+    const person = persons.get(interaction.speaker_id);
+
+    if (person?.name) {
+      return { label: person.name, index: person.index };
+    }
+
+    if (person?.index !== undefined) {
+      return { label: `Person ${person.index}`, index: person.index };
+    }
+
+    // Fallback if person not loaded yet
+    return { label: 'Loading...', index: 1 };
+  };
+
   return (
     <div className="flex flex-col h-full bg-gradient-to-br from-white to-[#f0fffa] rounded-none overflow-hidden border-l border-[#80ffdb]">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-6 border-b border-[#80ffdb] bg-gradient-to-r from-[#f0fffa] to-white">
         <h2 className="text-xl font-semibold text-[#1f2937]">Transcriptions</h2>
         <button
-          onClick={onClear}
-          className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-[#00cc6a] bg-[#f0fffa] border border-[#80ffdb] rounded-lg transition-all duration-200 hover:bg-[#e6fffa] hover:text-[#00b359]"
+          onClick={handleClear}
+          disabled={interactions.length === 0}
+          className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-[#00cc6a] bg-[#f0fffa] border border-[#80ffdb] rounded-lg transition-all duration-200 hover:bg-[#e6fffa] hover:text-[#00b359] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <i className="fas fa-trash" />
           Clear
@@ -55,8 +147,8 @@ export default function TranscriptionPanel({
         ) : (
           // Transcription Items
           interactions.map((interaction) => {
-            const personIndex = personIndexMap.get(interaction.speaker_id) || 0;
-            const colors = getPersonColor(personIndex);
+            const speaker = getSpeakerDisplay(interaction);
+            const colors = getPersonColor(speaker.index);
 
             return (
               <div
@@ -72,10 +164,10 @@ export default function TranscriptionPanel({
                     className="text-xs font-bold uppercase tracking-wider"
                     style={{ color: colors.text }}
                   >
-                    {interaction.speaker?.name || `Person ${personIndex}`}
+                    {speaker.label}
                   </span>
                   <span className="text-[11px] font-medium text-[#6b7280]">
-                    {interaction.timestamp}
+                    {new Date(interaction.timestamp).toLocaleTimeString()}
                   </span>
                 </div>
                 <div className="text-base text-[#1f2937] leading-relaxed">

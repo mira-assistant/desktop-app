@@ -31,13 +31,13 @@ export const ENDPOINTS = {
   SERVICE_NETWORK_DISABLE: '/service/network/disable',
 
   // Interactions
+  INTERACTIONS: '/interactions',
   INTERACTIONS_REGISTER: '/interactions/register',
   INTERACTION_BY_ID: '/interactions/:interactionId',
 
   // Persons
+  PERSONS: '/persons',
   PERSON_BY_ID: '/persons/:personId',
-  PERSONS_ALL: '/persons/all',
-  PERSON_UPDATE: '/persons/:personId/update',
 
   // Conversations
   CONVERSATION_BY_ID: '/conversations/:conversationId',

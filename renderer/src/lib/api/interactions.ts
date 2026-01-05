@@ -3,39 +3,24 @@ import { ENDPOINTS, API_CONFIG } from './constants';
 import { buildEndpoint } from './utils';
 import { Interaction } from '@/types/models.types';
 
+interface GetInteractionsParams {
+  limit?: number;
+  offset?: number;
+}
+
 export const interactionsApi = {
   /**
-   * Register interaction from audio
-   * POST /api/v1/interactions/register
-   *
-   * Returns:
-   * - 204 Accepted: Audio accepted, will receive via webhook
-   *
-   * Actual interaction data comes via webhook
+   * Get all interactions for the network
+   * GET /api/v1/interactions
    */
-  async register(
-    audioData: ArrayBuffer,
-    clientId: string,
-    format: string = 'wav'
-  ): Promise<void> {
-    const formData = new FormData();
-    const blob = new Blob([audioData], { type: `audio/${format}` });
-    formData.append('audio', blob, `audio.${format}`);
-    formData.append('client_id', clientId);
-
-    try {
-      await api.post(
-        ENDPOINTS.INTERACTIONS_REGISTER,
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          timeout: API_CONFIG.TIMEOUTS.INTERACTION,
-          validateStatus: (status) => status === 202 || status === 204,
-        }
-      );
-    } catch (error: any) {
-      console.error('Failed to register interaction:', error);
-    }
+  async getAll(params?: GetInteractionsParams): Promise<Interaction[]> {
+    const { data } = await api.get<Interaction[]>(ENDPOINTS.INTERACTIONS, {
+      params: {
+        limit: params?.limit || 50,
+        offset: params?.offset || 0,
+      },
+    });
+    return data;
   },
 
   /**
@@ -55,5 +40,37 @@ export const interactionsApi = {
   async delete(interactionId: string): Promise<void> {
     const endpoint = buildEndpoint(ENDPOINTS.INTERACTION_BY_ID, { interactionId });
     await api.delete(endpoint);
+  },
+
+  /**
+   * Register interaction from audio
+   * POST /api/v1/interactions/register
+   *
+   * Returns 204 No Content immediately
+   * Actual interaction data comes via webhook
+   */
+  async register(
+    audioData: ArrayBuffer,
+    clientId: string,
+    format: string = 'wav'
+  ): Promise<void> {
+    const formData = new FormData();
+    const blob = new Blob([audioData], { type: `audio/${format}` });
+    formData.append('audio', blob, `audio.${format}`);
+    formData.append('client_id', clientId);
+
+    try {
+      await api.post(
+        ENDPOINTS.INTERACTIONS_REGISTER,
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: API_CONFIG.TIMEOUTS.INTERACTION,
+          validateStatus: (status) => status === 204,
+        }
+      );
+    } catch (error: any) {
+      console.error('Failed to register interaction:', error);
+    }
   },
 };

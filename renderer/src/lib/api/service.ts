@@ -1,5 +1,5 @@
 import { api } from './client';
-import { API_CONFIG, ENDPOINTS } from './constants';
+import { ENDPOINTS } from './constants';
 import { buildEndpoint, getClientIpAddresses, retryWithBackoff } from './utils';
 
 // Types

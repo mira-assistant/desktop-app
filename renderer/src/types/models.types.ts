@@ -16,7 +16,6 @@ export interface Interaction {
   timestamp: string;
   network_id: string;
   speaker_id: string | null;
-  speaker?: Person;
   voice_embedding: number[] | null;
   entities: unknown[] | null;
   topics: unknown[] | null;
