@@ -62,10 +62,7 @@ export const serviceApi = {
    * List all registered clients
    * GET /api/v1/service/clients
    */
-  async listClients(): Promise<{
-    clients: string[];
-    total_count: number;
-  }> {
+  async listClients(): Promise<string[]> {
     const { data } = await api.get(ENDPOINTS.SERVICE_CLIENTS);
     return data;
   },

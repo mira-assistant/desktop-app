@@ -1,58 +1,96 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/cn';
 
 interface TooltipProps {
   content: string;
   children: React.ReactNode;
+  variant?: 'default' | 'success' | 'error';
+  show?: boolean; // Allow controlled visibility
+  position?: 'top' | 'bottom';
 }
 
-export default function Tooltip({ content, children }: TooltipProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
+export default function Tooltip({
+  content,
+  children,
+  variant = 'default',
+  show,
+  position = 'bottom'
+}: TooltipProps) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
   const targetRef = useRef<HTMLDivElement>(null);
+
+  // Use controlled visibility if provided, otherwise use hover state
+  const isVisible = show !== undefined ? show : isHovered;
 
   useEffect(() => {
     if (isVisible && targetRef.current) {
       const rect = targetRef.current.getBoundingClientRect();
-      setPosition({
-        top: 60,
-        left: rect.left + rect.width / 2,
-      });
+
+      if (position === 'bottom') {
+        setCoords({
+          top: rect.bottom + 8,
+          left: rect.left + rect.width / 2,
+        });
+      } else {
+        setCoords({
+          top: rect.top - 8,
+          left: rect.left + rect.width / 2,
+        });
+      }
     }
-  }, [isVisible]);
+  }, [isVisible, position]);
+
+  const variantStyles = {
+    default: 'bg-gray-900 text-white',
+    success: 'bg-green-500 text-white',
+    error: 'bg-red-500 text-white',
+  };
 
   return (
     <div
       ref={targetRef}
       className="relative inline-block"
-      onMouseEnter={() => setIsVisible(true)}
-      onMouseLeave={() => setIsVisible(false)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {children}
 
-      {isVisible && (
-        <div
-          className={cn(
-            'fixed z-50 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg',
-            'shadow-lg -translate-x-1/2 transition-opacity duration-200',
-            'opacity-0 animate-fadeIn'
-          )}
-          style={{ top: `${position.top}px`, left: `${position.left}px` }}
-        >
-          {content}
-          <style jsx>{`
-            @keyframes fadeIn {
-              from { opacity: 0; }
-              to { opacity: 1; }
-            }
-            .animate-fadeIn {
-              animation: fadeIn 0.2s ease-in forwards;
-            }
-          `}</style>
-        </div>
-      )}
+      <AnimatePresence>
+        {isVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: position === 'bottom' ? -10 : 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: position === 'bottom' ? -10 : 10 }}
+            transition={{ duration: 0.15 }}
+            className={cn(
+              'fixed z-50 px-3 py-1.5 text-xs font-medium rounded-lg shadow-lg',
+              '-translate-x-1/2 whitespace-nowrap',
+              variantStyles[variant]
+            )}
+            style={{
+              top: `${coords.top}px`,
+              left: `${coords.left}px`,
+              ...(position === 'top' && { transform: 'translate(-50%, -100%)' })
+            }}
+          >
+            {content}
+            {/* Arrow */}
+            <div
+              className={cn(
+                'absolute w-2 h-2 rotate-45',
+                position === 'bottom' ? '-top-1 left-1/2 -translate-x-1/2' : '-bottom-1 left-1/2 -translate-x-1/2',
+                variant === 'default' && 'bg-gray-900',
+                variant === 'success' && 'bg-green-500',
+                variant === 'error' && 'bg-red-500'
+              )}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

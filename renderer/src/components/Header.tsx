@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { serviceApi } from '@/lib/api/service';
+import Tooltip from '@/components/ui/Tooltip';
 
 export default function Header() {
   const { logout } = useAuth();
@@ -12,6 +13,7 @@ export default function Header() {
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   // Cache client list to avoid repeated API calls
   const clientListCache = useRef<string[]>([]);
@@ -39,20 +41,18 @@ export default function Header() {
   const fetchClientList = useCallback(async (): Promise<string[]> => {
     const now = Date.now();
 
-    // Use cache if still valid
     if (now - cacheTimestamp.current < CACHE_DURATION && clientListCache.current.length > 0) {
       return clientListCache.current;
     }
 
-    // Fetch fresh data
     try {
       const response = await serviceApi.listClients();
-      clientListCache.current = response.clients;
+      clientListCache.current = response;
       cacheTimestamp.current = now;
-      return response.clients;
+      return response;
     } catch (error) {
       console.error('Failed to fetch client list:', error);
-      return clientListCache.current; // Fall back to old cache
+      return clientListCache.current;
     }
   }, []);
 
@@ -60,12 +60,14 @@ export default function Header() {
   const checkAvailability = useCallback(async (name: string) => {
     if (!name || name.trim() === '') {
       setIsAvailable(null);
+      setShowTooltip(false);
       return;
     }
 
     // Don't check if it's the current name
     if (name === clientName) {
       setIsAvailable(null);
+      setShowTooltip(false);
       return;
     }
 
@@ -75,9 +77,11 @@ export default function Header() {
       const existingClients = await fetchClientList();
       const available = !existingClients.includes(name);
       setIsAvailable(available);
+      setShowTooltip(true); // Show tooltip with result
     } catch (error) {
       console.error('Failed to check client name availability:', error);
       setIsAvailable(null);
+      setShowTooltip(false);
     } finally {
       setIsChecking(false);
     }
@@ -93,7 +97,8 @@ export default function Header() {
       clearTimeout(debounceTimer.current);
     }
 
-    // Reset availability while typing
+    // Hide tooltip while typing
+    setShowTooltip(false);
     setIsAvailable(null);
 
     // Set new debounced check
@@ -116,16 +121,15 @@ export default function Header() {
       const newName = inputValue.trim();
 
       if (!newName) return;
-      if (newName === clientName) return; // No change
-      if (isAvailable === false) return; // Name taken
+      if (newName === clientName) return;
+      if (isAvailable === false) return;
 
       setIsRegistering(true);
+      setShowTooltip(false); // Hide tooltip when saving
 
       try {
-        // Rename client
         await serviceApi.renameClient(clientName, newName);
 
-        // Store in persistent storage
         if (window.electronAPI) {
           await window.electronAPI.storeClientName(newName);
         }
@@ -140,7 +144,7 @@ export default function Header() {
         console.log(`Client renamed to: ${newName}`);
       } catch (error) {
         console.error('Failed to update client name:', error);
-        setInputValue(clientName); // Revert on failure
+        setInputValue(clientName);
       } finally {
         setIsRegistering(false);
       }
@@ -153,6 +157,17 @@ export default function Header() {
     if (isAvailable === false) return 'border-red-500';
     if (isAvailable === true && inputValue !== clientName) return 'border-green-500';
     return 'border-[#80ffdb]';
+  };
+
+  // Determine tooltip content and variant
+  const getTooltipContent = () => {
+    if (isAvailable === true) return 'Available';
+    if (isAvailable === false) return 'Taken';
+    return '';
+  };
+
+  const getTooltipVariant = (): 'success' | 'error' => {
+    return isAvailable === true ? 'success' : 'error';
   };
 
   return (
@@ -174,37 +189,38 @@ export default function Header() {
           <label htmlFor="clientName" className="text-sm font-semibold text-[#00cc6a]">
             Client Name:
           </label>
-          <div className="relative">
-            <input
-              id="clientName"
-              type="text"
-              value={inputValue}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              disabled={isRegistering}
-              maxLength={50}
-              placeholder="desktop-client"
-              className={`w-[140px] px-2.5 py-1.5 text-sm text-center text-gray-900 bg-[#f0fffa] border-2 ${getBorderColor()} rounded-xl transition-all duration-300 focus:outline-none focus:bg-white disabled:opacity-50 disabled:cursor-not-allowed`}
-            />
-            {isChecking && (
-              <i className="fas fa-spinner fa-spin absolute right-2 top-1/2 -translate-y-1/2 text-yellow-500 text-xs" />
-            )}
-            {isRegistering && (
-              <i className="fas fa-spinner fa-spin absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs" />
-            )}
-          </div>
-          {isAvailable === false && inputValue !== clientName && (
-            <span className="text-xs text-red-500">Taken</span>
-          )}
-          {isAvailable === true && inputValue !== clientName && (
-            <span className="text-xs text-green-500">Available</span>
-          )}
+          <Tooltip
+            content={getTooltipContent()}
+            variant={getTooltipVariant()}
+            show={showTooltip && isAvailable !== null}
+            position="bottom"
+          >
+            <div className="relative">
+              <input
+                id="clientName"
+                type="text"
+                value={inputValue}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                disabled={isRegistering}
+                maxLength={50}
+                placeholder="desktop-client"
+                className={`w-[140px] px-2.5 py-1.5 text-sm text-center text-gray-900 bg-[#f0fffa] border-2 ${getBorderColor()} rounded-xl transition-all duration-300 focus:outline-none focus:bg-white disabled:opacity-50 disabled:cursor-not-allowed`}
+              />
+              {isChecking && (
+                <i className="fas fa-spinner fa-spin absolute right-2 top-1/2 -translate-y-1/2 text-yellow-500 text-xs" />
+              )}
+              {isRegistering && (
+                <i className="fas fa-spinner fa-spin absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs" />
+              )}
+            </div>
+          </Tooltip>
         </div>
 
         {/* Logout Button */}
         <button
           onClick={logout}
-          className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-[#fef2f2] to-[#fee2e2] border border-[#fca5a5] text-[#dc2626] transition-all duration-200 hover:from-[#fee2e2] hover:to-[#fecaca] hover:border-[#dc2626] hover:-translate-y-0.5 hover:shadow-md"
+          className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/50 border border-[#e5e7eb] text-red-400 transition-colors duration-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600"
           title="Logout"
         >
           <i className="fas fa-sign-out-alt text-sm" />
