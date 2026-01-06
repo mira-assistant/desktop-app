@@ -154,7 +154,7 @@ export default function MicrophoneButton({ disableSpaceToggle = false }: Microph
         )}
       </motion.button>
 
-      <motion.p
+      {/* <motion.p
         className="text-base font-medium text-[#6b7280]"
         animate={{
           opacity: [0.7, 1, 0.7]
@@ -166,7 +166,7 @@ export default function MicrophoneButton({ disableSpaceToggle = false }: Microph
         }}
       >
         {getStatusText()}
-      </motion.p>
+      </motion.p> */}
 
       {/* Keyboard hint */}
       <motion.div
@@ -174,10 +174,10 @@ export default function MicrophoneButton({ disableSpaceToggle = false }: Microph
         animate={{ opacity: 1 }}
         className="absolute bottom-20 flex items-center gap-2 text-sm text-[#9ca3af]"
       >
-        <kbd className="px-2 py-1 bg-white border border-[#e5e7eb] rounded-md shadow-sm font-mono text-xs">
+        <kbd className="px-4 py-1 bg-white border border-[#e5e7eb] rounded-md shadow-sm font-mono text-base">
           Space
         </kbd>
-        <span>to toggle</span>
+        <span>to toggle Mira</span>
       </motion.div>
     </div>
   );

@@ -230,10 +230,10 @@ export default function Header({ isPeoplePanelOpen, setIsPeoplePanelOpen }: Head
           ref={peopleButtonRef}
           onClick={() => setIsPeoplePanelOpen(!isPeoplePanelOpen)}
           className={cn(
-            "flex items-center justify-center w-8 h-8 rounded-lg border transition-all duration-200",
+            "flex items-center justify-center w-8 h-8 rounded-lg border border-green-300 transition-colors duration-200",
             isPeoplePanelOpen
-              ? "bg-[#00ff88] border-[#00cc6a] text-white"
-              : "bg-white/50 border-[#e5e7eb] text-[#6b7280] hover:bg-[#e6fffa] hover:border-[#80ffdb] hover:text-[#00cc6a]"
+              ? "text-green-600 bg-green-100 hover:border-green-400"
+              : "text-green-400 bg-white/50 hover:bg-green-100 hover:border-green-400 hover:text-green-600"
           )}
           title="People"
         >
