@@ -7,7 +7,7 @@ import { interactionsApi } from '@/lib/api/interactions';
 import { useService } from '@/hooks/useService';
 import { useToast } from '@/contexts/ToastContext';
 
-export default function TranscriptionPanel() {
+export default function InteractionPanel() {
   const { isConnected } = useService();
   const containerRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
@@ -151,7 +151,7 @@ export default function TranscriptionPanel() {
     <div className="flex flex-col h-full bg-gradient-to-br from-white to-[#f0fffa] rounded-none overflow-hidden border-l border-[#80ffdb]">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-6 border-b border-[#80ffdb] bg-gradient-to-r from-[#f0fffa] to-white">
-        <h2 className="text-xl font-semibold text-[#1f2937]">Transcriptions</h2>
+        <h2 className="text-xl font-semibold text-[#1f2937]">Interactions</h2>
         <button
           onClick={handleClear}
           disabled={interactions.length === 0}
@@ -162,7 +162,7 @@ export default function TranscriptionPanel() {
         </button>
       </div>
 
-      {/* Transcription List */}
+      {/* Interaction List */}
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto px-6 py-6 space-y-4"
@@ -177,7 +177,7 @@ export default function TranscriptionPanel() {
             </small>
           </div>
         ) : (
-          // Transcription Items
+          // Interaction Items
           interactions.map((interaction) => {
             const person = getPersonDisplay(interaction);
             const colors = getPersonColor(person.index);

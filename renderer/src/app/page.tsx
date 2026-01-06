@@ -6,7 +6,7 @@ import { useToast } from '@/contexts/ToastContext';
 import LoginOverlay from '@/components/ui/LoginOverlay';
 import Header from '@/components/Header';
 import MicrophoneButton from '@/components/MicrophoneButton';
-import TranscriptionPanel from '@/components/TranscriptionPanel';
+import InteractionPanel from '@/components/InteractionPanel';
 import Toast from '@/components/ui/Toast';
 
 export default function Home() {
@@ -37,7 +37,7 @@ export default function Home() {
         </div>
 
         <div className="flex-1 flex flex-col min-w-0">
-          <TranscriptionPanel />
+          <InteractionPanel />
         </div>
       </main>
 

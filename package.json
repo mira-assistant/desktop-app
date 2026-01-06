@@ -1,5 +1,5 @@
 {
-  "name": "desktop-client2",
+  "name": "Mira App",
   "version": "1.0.1",
   "main": "dist/main/main/background.js",
   "scripts": {
