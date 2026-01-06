@@ -1,5 +1,5 @@
-import { api } from './client';
-import { ENDPOINTS, API_CONFIG } from './constants';
+import { api } from '@shared/api/client';
+import { ENDPOINTS, API_CONFIG } from '@shared/api/constants';
 import { buildEndpoint } from './utils';
 import { Interaction } from '@/types/models.types';
 

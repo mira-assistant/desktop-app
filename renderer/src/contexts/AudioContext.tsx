@@ -92,17 +92,26 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isVADReady, setIsVADReady] = useState(false);
 
+  // Helper to get the absolute path to the assets folder
+  function getAssetPath() {
+    if (process.env.NODE_ENV === 'development') {
+      return '/';
+    }
+    // In production, we are in file://.../renderer/out/index.html
+    // We want to return file://.../renderer/out/
+    return window.location.href.replace('index.html', '').replace(/\/$/, '') + '/';
+  }
+
+  const assetPath = getAssetPath();
+
   const vad = useMicVAD({
-    baseAssetPath: '/',
-    onnxWASMBasePath: '/',
-    model: 'v5',
+    startOnLoad: true,
+    // Use the calculated absolute path
+    baseAssetPath: assetPath,
+    onnxWASMBasePath: assetPath,
 
-    startOnLoad: true, // Start loading immediately on app startup
-
-    onSpeechStart: () => {
-      console.log('[VAD] Speech started');
-    },
-
+    onSpeechStart: () => console.log("Speech started"),
+    onVADMisfire: () => console.log("VAD misfire"),
     onSpeechEnd: async (audio: Float32Array) => {
       console.log('[VAD] Speech ended');
       console.log('[VAD] Audio length:', audio.length, 'samples');
@@ -127,14 +136,11 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       }
     },
 
-    onVADMisfire: () => {
-      console.log('[VAD] Misfire detected');
-    },
-
+    model: 'v5',
     positiveSpeechThreshold: 0.85,
     negativeSpeechThreshold: 0.6,
     redemptionMs: 300,
-    minSpeechMs: 500,
+    minSpeechMs: 200,
     preSpeechPadMs: 100,
     submitUserSpeechOnPause: false,
   });
@@ -148,7 +154,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   }, [vad.loading, vad.errored]);
 
   // Control VAD listening based on service state
-  // VAD is always loaded, but only listens when service is enabled
   useEffect(() => {
     if (!isVADReady) return; // Wait for VAD to be ready
 

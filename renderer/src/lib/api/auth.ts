@@ -1,6 +1,6 @@
-import { api } from './client';
+import { api } from '@shared/api/client';
 import { LoginCredentials, RegisterData, AuthResponse } from '../../types/auth.types';
-import { ENDPOINTS } from './constants';
+import { ENDPOINTS } from '@shared/api/constants';
 
 export const authApi = {
   /**

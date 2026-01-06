@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useEffect, useState } from 'react';
-import { api } from '@/lib/api/client';
+import { api } from '@shared/api/client';
 import { authApi } from '@/lib/api/auth';
 import { User, AuthTokens, LoginCredentials, RegisterData } from '@/types/auth.types';
 

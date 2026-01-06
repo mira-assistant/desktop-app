@@ -1,22 +1,13 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
-import axios from 'axios';
-import dotenv from 'dotenv';
+import { api } from '../shared/api/client';
+import { ENDPOINTS } from '../shared/api/constants';
 import { TokenStorage } from './auth/token-storage';
 import { startWebhookServer, stopWebhookServer } from './webhook-server';
 import { handleGoogleOAuth, handleGitHubOAuth } from './auth/oauth-handler';
 
-// Load environment variables from root .env
-const envPath = path.join(__dirname, '../../../.env');
-const result = dotenv.config({ path: envPath });
-
-if (result.error) {
-  console.warn('⚠️  Warning: Could not load .env file from:', envPath);
-}
-
 // Configuration
 const WEBHOOK_PORT = 4280;
-const API_URL = process.env.API_URL || 'http://localhost:8000';
 const isDev = process.env.NODE_ENV === 'development';
 
 // State
@@ -34,6 +25,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      // Ensure path is relative to the compiled 'dist' structure
       preload: path.join(__dirname, 'preload.js'),
     },
   });
@@ -46,7 +38,8 @@ function createWindow() {
   if (isDev) {
     mainWindow.loadURL('http://localhost:3000');
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/out/index.html'));
+    // In prod, jump out of 'dist/main' to find 'renderer/out'
+    mainWindow.loadFile(path.join(__dirname, '../../renderer/out/index.html'));
   }
 
   mainWindow.on('closed', () => {
@@ -69,13 +62,13 @@ async function deregisterClient(): Promise<void> {
 
     console.log(`Deregistering client: ${currentClientName}`);
 
-    await axios.delete(
-      `${API_URL}/api/v1/service/clients/${encodeURIComponent(currentClientName)}`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        timeout: 5000,
-      },
-    );
+    // Use shared API client
+    // Note: We still manually attach the header because the Main process
+    // uses TokenStorage (Keytar), not localStorage.
+    await api.delete(ENDPOINTS.SERVICE_CLIENTS + `/${encodeURIComponent(currentClientName)}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      timeout: 5000,
+    });
 
   } catch (error: any) {
     console.error('Failed to deregister client:', error.message);
@@ -215,14 +208,26 @@ app.on('window-all-closed', () => {
 app.on('before-quit', async (event) => {
   event.preventDefault();
 
-  // Cleanup sequence
-  await deregisterClient();
-  stopWebhookServer();
+  // 1. Set a safety timeout to force quit if cleanup hangs
+  const forceQuitTimeout = setTimeout(() => {
+    console.warn('Cleanup timed out, forcing exit...');
+    app.exit(0);
+  }, 4000); // 4 seconds
 
-  if (mainWindow) {
-    mainWindow.webContents.send('app-closing');
+  try {
+    // 2. Attempt cleanup
+    await deregisterClient();
+    stopWebhookServer();
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('app-closing');
+    }
+  } catch (e) {
+    console.error('Error during cleanup:', e);
+  } finally {
+    // 3. Clear timeout and exit normally
+    clearTimeout(forceQuitTimeout);
+    console.log('Cleanup complete, quitting.');
+    app.exit(0);
   }
-
-  console.log('Cleanup complete');
-  app.exit(0);
 });

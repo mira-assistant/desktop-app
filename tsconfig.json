@@ -8,8 +8,13 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["shared/*"],
+      "@main/*": ["main/*"]
+    }
   },
-  "include": ["main/**/*"],
+  "include": ["main/**/*", "shared/**/*"], // Added shared here
   "exclude": ["node_modules", "renderer"]
 }

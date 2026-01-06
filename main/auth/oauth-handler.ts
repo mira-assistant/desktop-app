@@ -1,10 +1,11 @@
 import { BrowserWindow } from 'electron';
-import { api } from '../../renderer/src/lib/api/client';
+import { api } from '../../shared/api/client';
+import { ENDPOINTS } from '../../shared/api/constants';
 
 export async function handleGoogleOAuth(): Promise<{ code: string; state: string } | null> {
   try {
     // Get OAuth URL from backend
-    const { data } = await api.get('/auth/google/url', {
+    const { data } = await api.get(ENDPOINTS.AUTH_GOOGLE_URL, {
       params: { redirect_port: 4280 }
     });
 
@@ -23,14 +24,10 @@ export async function handleGoogleOAuth(): Promise<{ code: string; state: string
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true,
-          // ✅ Modern browser features
           sandbox: true,
         },
-        // ✅ Modern window styling
         titleBarStyle: 'default',
         backgroundColor: '#ffffff',
-        // ✅ Remove frame for cleaner look (optional)
-        // frame: false,
       });
 
       authWindow.loadURL(url);
@@ -71,7 +68,7 @@ export async function handleGoogleOAuth(): Promise<{ code: string; state: string
 export async function handleGitHubOAuth(): Promise<string | null> {
   try {
     // Get OAuth URL from backend
-    const { data } = await api.get('/auth/github/url', {
+    const { data } = await api.get(ENDPOINTS.AUTH_GITHUB_URL, {
       params: { redirect_port: 4280 }
     });
 
@@ -93,7 +90,7 @@ export async function handleGitHubOAuth(): Promise<string | null> {
           sandbox: true,
         },
         titleBarStyle: 'default',
-        backgroundColor: '#24292e', // GitHub dark theme
+        backgroundColor: '#24292e',
       });
 
       authWindow.loadURL(url);

@@ -1,18 +1,13 @@
 {
   "name": "Mira App",
   "version": "1.0.1",
-  "main": "dist/main/main/background.js",
+  "main": "dist/main/background.js",
   "scripts": {
-    "dev": "concurrently \"npm run dev:next\" \"npm run dev:electron:watch\"",
-    "dev:next": "next dev renderer",
-    "dev:electron:watch": "concurrently \"npm run dev:electron:compile\" \"npm run dev:electron:run\"",
-    "dev:electron:compile": "tsc -p main/tsconfig.json --watch",
-    "dev:electron:run": "wait-on http://localhost:3000 && cross-env electron .",
-    "dev:electron": "wait-on http://localhost:3000 && cross-env electron .",
-    "build": "npm run build:next && npm run build:electron",
-    "build:next": "next build renderer",
-    "build:electron": "tsc -p main/tsconfig.json",
-    "start": "npm run build && electron .",
+    "clean": "rimraf dist renderer/.next renderer/out release",
+    "prebuild": "npm run clean",
+    "dev": "concurrently -n \"NEXT,MAIN,ELEC\" -c \"magenta,blue,green\" \"next dev renderer\" \"tsc -p main/tsconfig.json --watch\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
+    "build": "next build renderer && tsc -p main/tsconfig.json",
+    "start": "npm run build && cross-env NODE_ENV=production electron .",
     "package": "npm run build && electron-builder"
   },
   "dependencies": {
@@ -39,6 +34,7 @@
     "electron-builder": "^26.0.12",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "rimraf": "^6.1.2",
     "tailwindcss": "^4",
     "typescript": "^5",
     "wait-on": "^9.0.3"
