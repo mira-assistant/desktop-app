@@ -28,7 +28,7 @@ export function startWebhookServer(port: number, mainWindow: BrowserWindow): str
   app.post('/webhook', (req, res) => {
     const event = req.body.event;
 
-    console.log('📥 Webhook received:', event || 'interaction');
+    console.log('📥 Webhook received:', req.body);
 
     if (event === 'service_status') {
       mainWindow.webContents.send('service-status-changed', req.body);

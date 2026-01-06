@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Interaction } from '@/types/models.types';
+import { Interaction, Person } from '@/types/models.types';
 import { personsApi } from '@/lib/api/persons';
 import { interactionsApi } from '@/lib/api/interactions';
 import { getPersonColor } from '@/lib/colors';
 import { useService } from '@/hooks/useService';
-import { Person } from '@/types/models.types';
 
 export default function TranscriptionPanel() {
   const { isConnected } = useService();
@@ -35,33 +34,39 @@ export default function TranscriptionPanel() {
   useEffect(() => {
     if (!window.electronAPI) return;
 
-    const handleNewInteraction = (interaction: Interaction) => {
-      console.log('📥 New interaction received:', interaction);
+    const handleNewInteraction = (webhookPayload: any) => {
+      console.log('📥 Webhook received:', webhookPayload);
 
-      setInteractions(prev => {
-        // Prevent duplicates
-        if (prev.some(i => i.id === interaction.id)) {
-          return prev;
-        }
-        return [...prev, interaction];
-      });
+      let interaction: Interaction;
+
+      // Handle the webhook format: { event: "interaction", data: {...} }
+      if (webhookPayload.event === 'interaction' && webhookPayload.data) {
+        interaction = webhookPayload.data;
+      } else {
+        // Fallback: treat entire payload as interaction
+        interaction = webhookPayload;
+      }
+
+      setInteractions(prev => [...prev, interaction]);
     };
 
     window.electronAPI.onNewInteraction(handleNewInteraction);
   }, []);
 
-  // Fetch person details when new speaker IDs appear
+  // Fetch person details when new person IDs appear
   useEffect(() => {
     const fetchMissingPersons = async () => {
-      const speakerIds = new Set(
+      const personIds = new Set(
         interactions
-          .map(i => i.speaker_id)
+          .map(i => i.person_id)
           .filter((id): id is string => id !== null && id !== undefined)
       );
 
-      const missingIds = Array.from(speakerIds).filter(id => !persons.has(id));
+      const missingIds = Array.from(personIds).filter(id => !persons.has(id));
 
       if (missingIds.length === 0) return;
+
+      console.log('Fetching missing persons:', missingIds);
 
       try {
         const fetchedPersons = await Promise.all(
@@ -78,7 +83,7 @@ export default function TranscriptionPanel() {
           return newMap;
         });
       } catch (error) {
-        console.error('Failed to fetch person details:', error);
+        console.error('❌ Failed to fetch person details:', error);
       }
     };
 
@@ -96,12 +101,12 @@ export default function TranscriptionPanel() {
     setInteractions([]);
   };
 
-  const getSpeakerDisplay = (interaction: Interaction): { label: string; index: number } => {
-    if (!interaction.speaker_id) {
-      return { label: 'Unknown Speaker', index: 0 };
+  const getPersonDisplay = (interaction: Interaction): { label: string; index: number } => {
+    if (!interaction.person_id) {
+      return { label: 'Unknown Person', index: 0 };
     }
 
-    const person = persons.get(interaction.speaker_id);
+    const person = persons.get(interaction.person_id);
 
     if (person?.name) {
       return { label: person.name, index: person.index };
@@ -147,8 +152,8 @@ export default function TranscriptionPanel() {
         ) : (
           // Transcription Items
           interactions.map((interaction) => {
-            const speaker = getSpeakerDisplay(interaction);
-            const colors = getPersonColor(speaker.index);
+            const person = getPersonDisplay(interaction);
+            const colors = getPersonColor(person.index);
 
             return (
               <div
@@ -164,7 +169,7 @@ export default function TranscriptionPanel() {
                     className="text-xs font-bold uppercase tracking-wider"
                     style={{ color: colors.text }}
                   >
-                    {speaker.label}
+                    {person.label}
                   </span>
                   <span className="text-[11px] font-medium text-[#6b7280]">
                     {new Date(interaction.timestamp).toLocaleTimeString()}
