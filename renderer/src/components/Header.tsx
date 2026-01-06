@@ -4,9 +4,17 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { serviceApi } from '@/lib/api/service';
 import Tooltip from '@/components/ui/Tooltip';
+import PeoplePanel from '@/components/PeoplePanel';
+import { cn } from '@/lib/cn';
 
-export default function Header() {
+interface HeaderProps {
+  isPeoplePanelOpen: boolean;
+  setIsPeoplePanelOpen: (open: boolean) => void;
+}
+
+export default function Header({ isPeoplePanelOpen, setIsPeoplePanelOpen }: HeaderProps) {
   const { logout } = useAuth();
+  const peopleButtonRef = useRef<HTMLButtonElement>(null);
 
   const [clientName, setClientName] = useState('desktop-client');
   const [inputValue, setInputValue] = useState('desktop-client');
@@ -217,6 +225,21 @@ export default function Header() {
           </Tooltip>
         </div>
 
+        {/* People Button */}
+        <button
+          ref={peopleButtonRef}
+          onClick={() => setIsPeoplePanelOpen(!isPeoplePanelOpen)}
+          className={cn(
+            "flex items-center justify-center w-8 h-8 rounded-lg border transition-all duration-200",
+            isPeoplePanelOpen
+              ? "bg-[#00ff88] border-[#00cc6a] text-white"
+              : "bg-white/50 border-[#e5e7eb] text-[#6b7280] hover:bg-[#e6fffa] hover:border-[#80ffdb] hover:text-[#00cc6a]"
+          )}
+          title="People"
+        >
+          <i className="fas fa-users text-sm" />
+        </button>
+
         {/* Logout Button */}
         <button
           onClick={logout}
@@ -225,6 +248,12 @@ export default function Header() {
         >
           <i className="fas fa-sign-out-alt text-sm" />
         </button>
+
+        <PeoplePanel
+          isOpen={isPeoplePanelOpen}
+          onClose={() => setIsPeoplePanelOpen(false)}
+          excludeElement={peopleButtonRef.current}
+        />
       </div>
     </header>
   );

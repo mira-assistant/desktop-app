@@ -33,4 +33,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Client name
   storeClientName: (clientName: string) => ipcRenderer.invoke('client:store-name', clientName),
   getClientName: () => ipcRenderer.invoke('client:get-name'),
+
+
+  // Synchronous deregister for beforeunload event
+  deregisterClient: () => ipcRenderer.invoke('client:deregister'),
 });

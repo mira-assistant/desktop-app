@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/contexts/ToastContext';
 import LoginOverlay from '@/components/ui/LoginOverlay';
@@ -11,6 +12,7 @@ import Toast from '@/components/ui/Toast';
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
   const { toasts, removeToast } = useToast();
+  const [isPeoplePanelOpen, setIsPeoplePanelOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -27,11 +29,11 @@ export default function Home() {
     <div className="flex flex-col h-screen bg-[rgba(255,255,255,0.95)] backdrop-blur-[2px] border border-[rgba(0,255,136,0.2)]">
       {!isAuthenticated && <LoginOverlay />}
 
-      <Header />
+      <Header isPeoplePanelOpen={isPeoplePanelOpen} setIsPeoplePanelOpen={setIsPeoplePanelOpen} />
 
       <main className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex items-center justify-center px-10 py-10 bg-gradient-to-br from-[#f0fffa] to-[#f0fffa]">
-          <MicrophoneButton />
+          <MicrophoneButton disableSpaceToggle={isPeoplePanelOpen} />
         </div>
 
         <div className="flex-1 flex flex-col min-w-0">

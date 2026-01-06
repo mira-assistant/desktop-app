@@ -29,7 +29,7 @@ let currentClientName: string | null = null;
  */
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
+    width: 1500,
     height: 800,
     webPreferences: {
       nodeIntegration: false,
@@ -74,7 +74,7 @@ async function deregisterClient(): Promise<void> {
       {
         headers: { Authorization: `Bearer ${accessToken}` },
         timeout: 5000,
-      }
+      },
     );
 
   } catch (error: any) {
@@ -186,6 +186,10 @@ ipcMain.handle('client:get-name', async () => {
     console.error('[IPC] Error getting client name:', error);
     return { success: false, error: error.message };
   }
+});
+
+ipcMain.handle('client:deregister', async (__dirname, clientName: string) => {
+  await deregisterClient();
 });
 
 // ============================================================================

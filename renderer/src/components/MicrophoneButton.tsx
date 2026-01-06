@@ -5,7 +5,11 @@ import { motion } from 'framer-motion';
 import { useService } from '@/hooks/useService';
 import { cn } from '@/lib/cn';
 
-export default function MicrophoneButton() {
+interface MicrophoneButtonProps {
+  disableSpaceToggle?: boolean;
+}
+
+export default function MicrophoneButton({ disableSpaceToggle = false }: MicrophoneButtonProps) {
   const {
     isServiceEnabled,
     toggleService,
@@ -13,7 +17,10 @@ export default function MicrophoneButton() {
   } = useService();
 
   // Spacebar activation
+  // Spacebar activation (disabled when panel open)
   useEffect(() => {
+    if (disableSpaceToggle) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space' && !isTogglingService) {
         e.preventDefault();
@@ -23,7 +30,7 @@ export default function MicrophoneButton() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isTogglingService, toggleService]);
+  }, [isTogglingService, toggleService, disableSpaceToggle]);
 
   const getStatusText = () => {
     if (isTogglingService && !isServiceEnabled) return 'Enabling Mira...';

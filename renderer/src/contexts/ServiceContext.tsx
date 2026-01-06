@@ -28,6 +28,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
   const [isTogglingService, setIsTogglingService] = useState(false);
 
   const enableTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isRegisteredRef = useRef(false);
 
   // Initialize: Load client name
   useEffect(() => {
@@ -47,32 +48,64 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
     if (isAuthLoading) return;
     if (!isAuthenticated) {
       setIsConnected(false);
+      isRegisteredRef.current = false;
       return;
     }
 
     const registerClient = async () => {
       if (!clientName) return;
       if (!window.electronAPI) return;
+      if (isRegisteredRef.current) return; // Already registered
 
       try {
         const webhookUrl = await window.electronAPI.getWebhookUrl();
         await serviceApi.registerClient(clientName, webhookUrl);
+        await window.electronAPI.storeClientName(clientName);
         setIsConnected(true);
+        isRegisteredRef.current = true;
         console.log(`Client ${clientName} registered`);
       } catch (error: any) {
         console.error('Failed to register client:', error);
         setIsConnected(false);
+        isRegisteredRef.current = false;
       }
     };
 
     registerClient();
+  }, [clientName, isAuthenticated, isAuthLoading]);
 
-    return () => {
-      if (clientName && isConnected) {
-        serviceApi.deregisterClient(clientName).catch(console.error);
+  // Cleanup: Deregister on unmount, logout, or window close
+  useEffect(() => {
+    if (!isAuthenticated || !isConnected) return;
+
+    const deregisterClient = async () => {
+      if (!isRegisteredRef.current) return;
+
+      try {
+        console.log(`Deregistering client ${clientName}...`);
+        await serviceApi.deregisterClient(clientName);
+        isRegisteredRef.current = false;
+        console.log(`Client ${clientName} deregistered`);
+      } catch (error) {
+        console.error('Failed to deregister client:', error);
       }
     };
-  }, [clientName, isAuthenticated, isAuthLoading]);
+
+    // Handle page unload (refresh, close tab, navigate away)
+    const handleBeforeUnload = () => {
+      if (isRegisteredRef.current && window.electronAPI) {
+        window.electronAPI.deregisterClient();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Cleanup on unmount (logout, component unmount)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      deregisterClient();
+    };
+  }, [clientName, isAuthenticated, isConnected]);
 
   // Listen for service status changes via webhook
   useEffect(() => {
@@ -81,7 +114,6 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
     const handleServiceStatusChanged = (status: { enabled: boolean }) => {
       console.log('[Service] Status webhook:', status.enabled ? 'ENABLED' : 'DISABLED');
 
-      // Clear timeout if webhook arrives
       if (enableTimeoutRef.current) {
         clearTimeout(enableTimeoutRef.current);
         enableTimeoutRef.current = null;
@@ -103,7 +135,6 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
       } else {
         await serviceApi.enable();
 
-        // Set timeout for enable operation
         enableTimeoutRef.current = setTimeout(() => {
           console.error('[Service] Enable timeout - no webhook received');
           setIsTogglingService(false);
