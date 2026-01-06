@@ -1,27 +1,16 @@
 'use client';
 
-import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/contexts/ToastContext';
 import LoginOverlay from '@/components/ui/LoginOverlay';
 import Header from '@/components/Header';
 import MicrophoneButton from '@/components/MicrophoneButton';
 import TranscriptionPanel from '@/components/TranscriptionPanel';
 import Toast from '@/components/ui/Toast';
-import { ToastType } from '@/types/models.types';
-
-interface ToastMessage {
-  id: string;
-  message: string;
-  type: ToastType;
-}
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
+  const { toasts, removeToast } = useToast();
 
   if (isLoading) {
     return (
@@ -41,12 +30,10 @@ export default function Home() {
       <Header />
 
       <main className="flex-1 flex overflow-hidden">
-        {/* Left Section - Microphone */}
         <div className="flex-1 flex items-center justify-center px-10 py-10 bg-gradient-to-br from-[#f0fffa] to-[#f0fffa]">
           <MicrophoneButton />
         </div>
 
-        {/* Right Section - Transcriptions */}
         <div className="flex-1 flex flex-col min-w-0">
           <TranscriptionPanel />
         </div>

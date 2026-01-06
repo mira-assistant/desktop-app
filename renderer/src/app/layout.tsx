@@ -1,6 +1,8 @@
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ServiceProvider } from '@/contexts/ServiceContext';
 import { AudioProvider } from '@/contexts/AudioContext';
+import { ToastProvider } from '@/contexts/ToastContext';
+
 import './globals.css';
 
 export default function RootLayout({
@@ -23,13 +25,15 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <AuthProvider>
-          <ServiceProvider>
-            <AudioProvider>
-              {children}
-            </AudioProvider>
-          </ServiceProvider>
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <ServiceProvider>
+              <AudioProvider>
+                {children}
+              </AudioProvider>
+            </ServiceProvider>
+          </AuthProvider>
+        </ToastProvider>
       </body>
     </html>
   );

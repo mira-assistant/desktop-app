@@ -6,10 +6,12 @@ import { personsApi } from '@/lib/api/persons';
 import { interactionsApi } from '@/lib/api/interactions';
 import { getPersonColor } from '@/lib/colors';
 import { useService } from '@/hooks/useService';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function TranscriptionPanel() {
   const { isConnected } = useService();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { showToast } = useToast();
 
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [persons, setPersons] = useState<Map<string, Person>>(new Map());
@@ -39,12 +41,13 @@ export default function TranscriptionPanel() {
 
       let interaction: Interaction;
 
-      // Handle the webhook format: { event: "interaction", data: {...} }
-      if (webhookPayload.event === 'interaction' && webhookPayload.data) {
-        interaction = webhookPayload.data;
-      } else {
-        // Fallback: treat entire payload as interaction
-        interaction = webhookPayload;
+      try {
+        const parsedInteractionData = JSON.parse(webhookPayload.data);
+        interaction = parsedInteractionData;
+      } catch (err) {
+        console.error('Failed to parse webhook payload', err);
+        showToast('Failed to parse Interaction data', 'error');
+        return;
       }
 
       setInteractions(prev => [...prev, interaction]);

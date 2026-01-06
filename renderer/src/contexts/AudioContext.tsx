@@ -1,12 +1,13 @@
 'use client';
 
 import { createContext, useEffect, useState } from 'react';
-import { useMicVAD, utils } from '@ricky0123/vad-react';
+import { useMicVAD } from '@ricky0123/vad-react';
 import { interactionsApi } from '@/lib/api/interactions';
 import { useService } from '@/hooks/useService';
 
 interface AudioContextType {
   isProcessing: boolean;
+  isVADReady: boolean;
 }
 
 export const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -21,25 +22,22 @@ function calculateRMS(audio: Float32Array): number {
 
 function hasSignificantAudio(audio: Float32Array): boolean {
   const rms = calculateRMS(audio);
-  const minRMS = 0.01; // Minimum RMS threshold
-  const maxRMS = 0.3;  // Maximum RMS threshold
+  const minRMS = 0.01;
+  const maxRMS = 0.3;
 
-  // Check if audio is too quiet (likely silence/noise)
   if (rms < minRMS) {
     console.log('[VAD] Rejected: Too quiet (RMS:', rms.toFixed(4), ')');
     return false;
   }
 
-  // Check if audio is clipping (too loud/distorted)
   if (rms > maxRMS) {
     console.log('[VAD] Rejected: Too loud/clipping (RMS:', rms.toFixed(4), ')');
     return false;
   }
 
-  // Check duration (too short = noise, too long = picked up ambient)
   const durationSeconds = audio.length / 16000;
-  const minDuration = 0.5; // 500ms minimum
-  const maxDuration = 10;  // 10 seconds maximum
+  const minDuration = 0.5;
+  const maxDuration = 10;
 
   if (durationSeconds < minDuration) {
     console.log('[VAD] Rejected: Too short (', durationSeconds.toFixed(2), 's)');
@@ -55,12 +53,10 @@ function hasSignificantAudio(audio: Float32Array): boolean {
   return true;
 }
 
-// Replace the WAV encoding
 function encodeWAV(samples: Float32Array, sampleRate: number = 16000): ArrayBuffer {
   const buffer = new ArrayBuffer(44 + samples.length * 2);
   const view = new DataView(buffer);
 
-  // WAV header
   const writeString = (offset: number, string: string) => {
     for (let i = 0; i < string.length; i++) {
       view.setUint8(offset + i, string.charCodeAt(i));
@@ -71,17 +67,16 @@ function encodeWAV(samples: Float32Array, sampleRate: number = 16000): ArrayBuff
   view.setUint32(4, 36 + samples.length * 2, true);
   writeString(8, 'WAVE');
   writeString(12, 'fmt ');
-  view.setUint32(16, 16, true); // PCM format chunk size
-  view.setUint16(20, 1, true); // PCM format
-  view.setUint16(22, 1, true); // Mono (1 channel)
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
   view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true); // Byte rate
-  view.setUint16(32, 2, true); // Block align
-  view.setUint16(34, 16, true); // Bits per sample
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
   writeString(36, 'data');
   view.setUint32(40, samples.length * 2, true);
 
-  // Convert float32 to int16
   let offset = 44;
   for (let i = 0; i < samples.length; i++) {
     const s = Math.max(-1, Math.min(1, samples[i]));
@@ -95,19 +90,19 @@ function encodeWAV(samples: Float32Array, sampleRate: number = 16000): ArrayBuff
 export function AudioProvider({ children }: { children: React.ReactNode }) {
   const { clientName, isServiceEnabled } = useService();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isVADReady, setIsVADReady] = useState(false);
 
   const vad = useMicVAD({
     baseAssetPath: '/',
     onnxWASMBasePath: '/',
     model: 'v5',
 
-    startOnLoad: false,
+    startOnLoad: true, // Start loading immediately on app startup
 
     onSpeechStart: () => {
       console.log('[VAD] Speech started');
     },
 
-    // Update onSpeechEnd
     onSpeechEnd: async (audio: Float32Array) => {
       console.log('[VAD] Speech ended');
       console.log('[VAD] Audio length:', audio.length, 'samples');
@@ -121,7 +116,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       setIsProcessing(true);
 
       try {
-        const wavBuffer = encodeWAV(audio, 16000); // Use custom encoder
+        const wavBuffer = encodeWAV(audio, 16000);
         console.log('[VAD] Sending audio:', wavBuffer.byteLength, 'bytes');
         await interactionsApi.register(wavBuffer, clientName, 'wav');
         console.log('[VAD] Audio sent successfully');
@@ -136,42 +131,47 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       console.log('[VAD] Misfire detected');
     },
 
-    // Very selective thresholds
-    positiveSpeechThreshold: 0.85,  // Higher = more selective for speech start
-    negativeSpeechThreshold: 0.6,   // Higher = quicker to end speech detection
-
-    // Frame settings for tighter control
-    redemptionMs: 300,      // 300ms before ending speech
-    minSpeechMs: 500,       // 500ms minimum speech duration
-    preSpeechPadMs: 100,    // 100ms padding before speech
-
+    positiveSpeechThreshold: 0.85,
+    negativeSpeechThreshold: 0.6,
+    redemptionMs: 300,
+    minSpeechMs: 500,
+    preSpeechPadMs: 100,
     submitUserSpeechOnPause: false,
   });
 
+  // Track when VAD is fully loaded and ready
   useEffect(() => {
-    if (isServiceEnabled && !vad.listening && !vad.loading) {
-      console.log('[VAD] Starting VAD');
+    if (!vad.loading && !vad.errored) {
+      console.log('[VAD] Ready and initialized');
+      setIsVADReady(true);
+    }
+  }, [vad.loading, vad.errored]);
+
+  // Control VAD listening based on service state
+  // VAD is always loaded, but only listens when service is enabled
+  useEffect(() => {
+    if (!isVADReady) return; // Wait for VAD to be ready
+
+    if (isServiceEnabled && !vad.listening) {
+      console.log('[VAD] Starting listening');
       vad.start();
     } else if (!isServiceEnabled && vad.listening) {
-      console.log('[VAD] Pausing VAD');
+      console.log('[VAD] Pausing listening');
       vad.pause();
     }
-  }, [isServiceEnabled, vad.listening, vad.loading]);
+  }, [isServiceEnabled, vad.listening, isVADReady]);
 
   useEffect(() => {
     if (vad.loading) {
-      console.log('[VAD] Loading...');
-    }
-    if (vad.listening) {
-      console.log('[VAD] Listening active');
+      console.log('[VAD] Loading models...');
     }
     if (vad.errored) {
       console.error('[VAD] Error:', vad.errored);
     }
-  }, [vad.listening, vad.errored, vad.loading]);
+  }, [vad.loading, vad.errored]);
 
   return (
-    <AudioContext.Provider value={{ isProcessing }}>
+    <AudioContext.Provider value={{ isProcessing, isVADReady }}>
       {children}
     </AudioContext.Provider>
   );
