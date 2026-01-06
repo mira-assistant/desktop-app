@@ -46,7 +46,7 @@ export default function TranscriptionPanel() {
         interaction = parsedInteractionData;
       } catch (err) {
         console.error('Failed to parse webhook payload', err);
-        showToast('Failed to parse Interaction data', 'error');
+        showToast('Failed to parse interaction data', 'error');
         return;
       }
 
@@ -101,7 +101,18 @@ export default function TranscriptionPanel() {
   }, [interactions]);
 
   const handleClear = () => {
+    let interaction = interactions.pop();
+
+    while (interaction) {
+      interactionsApi.delete(interaction.id).catch((error) => {
+        if (!interaction) return;
+        console.error(`Failed to delete interaction with id ${interaction.id}:`, error);
+        showToast(`Failed to delete interaction: ${interaction.id}`, 'error');
+      })
+      interaction = interactions.pop();
+    }
     setInteractions([]);
+    showToast('Previous interactions cleared.', 'success')
   };
 
   const getPersonDisplay = (interaction: Interaction): { label: string; index: number } => {
