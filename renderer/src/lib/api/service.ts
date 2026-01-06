@@ -10,7 +10,6 @@ interface ClientRegistration {
 }
 
 interface ClientResponse {
-  client_id: string;
   webhook_url: string | null;
   ip_address: string;
   connected_at: string;

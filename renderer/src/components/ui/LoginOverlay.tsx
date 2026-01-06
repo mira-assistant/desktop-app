@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { authApi } from '@/lib/api/auth';
 
 export default function LoginOverlay() {
-  const { login, register, setTokensAndUser } = useAuth();
+  const { login, register, saveTokens } = useAuth();
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -87,7 +87,7 @@ export default function LoginOverlay() {
       }
 
       // Update auth context
-      setTokensAndUser(
+      saveTokens(
         { accessToken: response.access_token, refreshToken: response.refresh_token }
       );
 
@@ -124,7 +124,7 @@ export default function LoginOverlay() {
       }
 
       // Update auth context
-      setTokensAndUser(
+      saveTokens(
         { accessToken: response.access_token, refreshToken: response.refresh_token }
       );
 

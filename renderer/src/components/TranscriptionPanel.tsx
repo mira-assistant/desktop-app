@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Interaction, Person } from '@/types/models.types';
 import { personsApi } from '@/lib/api/persons';
 import { interactionsApi } from '@/lib/api/interactions';
-import { getPersonColor } from '@/lib/colors';
 import { useService } from '@/hooks/useService';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -15,6 +14,19 @@ export default function TranscriptionPanel() {
 
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [persons, setPersons] = useState<Map<string, Person>>(new Map());
+
+  interface PersonColor {
+    background: string;
+    border: string;
+    text: string;
+  };
+
+  const greenShades: PersonColor[] = [
+    { background: '#f0fffa', border: '#00ff88', text: '#00cc6a' },
+    { background: '#e6fffa', border: '#00e074', text: '#00b359' },
+    { background: '#dcfdf7', border: '#00d15a', text: '#009944' },
+    { background: '#d1fae5', border: '#00c249', text: '#007f30' },
+  ];
 
   // Load existing interactions when connected
   useEffect(() => {
@@ -39,16 +51,7 @@ export default function TranscriptionPanel() {
     const handleNewInteraction = (webhookPayload: any) => {
       console.log('📥 Webhook received:', webhookPayload);
 
-      let interaction: Interaction;
-
-      try {
-        const parsedInteractionData = JSON.parse(webhookPayload.data);
-        interaction = parsedInteractionData;
-      } catch (err) {
-        console.error('Failed to parse webhook payload', err);
-        showToast('Failed to parse interaction data', 'error');
-        return;
-      }
+      let interaction: Interaction = webhookPayload.data;
 
       setInteractions(prev => [...prev, interaction]);
     };
@@ -108,9 +111,15 @@ export default function TranscriptionPanel() {
         if (!interaction) return;
         console.error(`Failed to delete interaction with id ${interaction.id}:`, error);
         showToast(`Failed to delete interaction: ${interaction.id}`, 'error');
-      })
+      });
+      personsApi.delete(interaction.person_id).catch((error) => {
+        if (!interaction) return;
+        console.error(`Failed to delete person with id ${interaction.person_id}:`, error);
+        showToast(`Failed to delete person: ${interaction.person_id}`, 'error');
+      });
       interaction = interactions.pop();
     }
+    setPersons(new Map());
     setInteractions([]);
     showToast('Previous interactions cleared.', 'success')
   };
@@ -132,6 +141,10 @@ export default function TranscriptionPanel() {
 
     // Fallback if person not loaded yet
     return { label: 'Loading...', index: 1 };
+  };
+
+  const getPersonColor = (personIndex: number): PersonColor => {
+    return greenShades[personIndex % greenShades.length];
   };
 
   return (

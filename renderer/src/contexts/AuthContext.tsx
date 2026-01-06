@@ -6,19 +6,17 @@ import { authApi } from '@/lib/api/auth';
 import { User, AuthTokens, LoginCredentials, RegisterData } from '@/types/auth.types';
 
 interface AuthContextType {
-  user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
-  setTokensAndUser: (newTokens: AuthTokens, newUser: User) => void;
+  saveTokens: (newTokens: AuthTokens) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
   const [tokens, setTokens] = useState<AuthTokens | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,7 +57,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             setTokens(newTokens);
-            setUser(refreshResponse.user);
             setIsAuthenticated(true);
 
             // Retry original request with new token
@@ -76,7 +73,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             // Clear state
             setTokens(null);
-            setUser(null);
             setIsAuthenticated(false);
 
             return Promise.reject(refreshError);
@@ -115,7 +111,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
               // Set authenticated state
               setTokens(newTokens);
-              setUser(refreshResponse.user);
               setIsAuthenticated(true);
 
               console.log('Authentication verified');
@@ -124,7 +119,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.error('Token verification failed, clearing tokens');
               await window.electronAPI.clearTokens();
               setTokens(null);
-              setUser(null);
               setIsAuthenticated(false);
             }
           } else {
@@ -169,7 +163,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setTokens(newTokens);
-      setUser(response.user);
       setIsAuthenticated(true);
 
       console.log('Logged in successfully');
@@ -201,7 +194,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setTokens(newTokens);
-      setUser(response.user);
       setIsAuthenticated(true);
 
       console.log('Registered successfully');
@@ -219,7 +211,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setTokens(null);
-      setUser(null);
       setIsAuthenticated(false);
 
       console.log('Logged out successfully');
@@ -228,22 +219,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const setTokensAndUser = useCallback((newTokens: AuthTokens, newUser: User) => {
+  const saveTokens = useCallback((newTokens: AuthTokens) => {
     setTokens(newTokens);
-    setUser(newUser);
     setIsAuthenticated(true);
   }, []);
 
   return (
     <AuthContext.Provider
       value={{
-        user,
         isAuthenticated,
         isLoading,
         login,
         register,
         logout,
-        setTokensAndUser,
+        saveTokens,
       }}
     >
       {children}
