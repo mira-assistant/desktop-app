@@ -40,5 +40,6 @@ export const ENDPOINTS = {
   PERSON_BY_ID: '/persons/:personId',
 
   // Conversations
+  CONVERSATIONS: '/conversations',
   CONVERSATION_BY_ID: '/conversations/:conversationId',
 } as const;

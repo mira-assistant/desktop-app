@@ -113,10 +113,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     onSpeechStart: () => console.log("Speech started"),
     onVADMisfire: () => console.log("VAD misfire"),
     onSpeechEnd: async (audio: Float32Array) => {
-      console.log('[VAD] Speech ended');
-      console.log('[VAD] Audio length:', audio.length, 'samples');
-      console.log('[VAD] Duration:', (audio.length / 16000).toFixed(2), 's');
-
       if (!hasSignificantAudio(audio)) {
         console.log('[VAD] Audio rejected - quality check failed');
         return;
@@ -126,8 +122,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const wavBuffer = encodeWAV(audio, 16000);
-        console.log('[VAD] Sending audio:', wavBuffer.byteLength, 'bytes');
-        await interactionsApi.register(wavBuffer, clientName, 'wav');
+        await interactionsApi.register(wavBuffer, clientName);
         console.log('[VAD] Audio sent successfully');
         setIsProcessing(false);
       } catch (error) {

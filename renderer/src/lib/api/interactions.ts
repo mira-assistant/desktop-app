@@ -52,11 +52,10 @@ export const interactionsApi = {
   async register(
     audioData: ArrayBuffer,
     clientId: string,
-    format: string = 'wav'
   ): Promise<void> {
     const formData = new FormData();
-    const blob = new Blob([audioData], { type: `audio/${format}` });
-    formData.append('audio', blob, `audio.${format}`);
+    const blob = new Blob([audioData], { type: 'audio/wav' });
+    formData.append('audio', blob, 'audio.wav');
     formData.append('client_id', clientId);
 
     try {

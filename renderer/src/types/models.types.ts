@@ -13,18 +13,16 @@ export interface Interaction {
   timestamp: string;
   network_id: string;
   person_id: string;
-  conversation_id: string | null;
+  conversation_id: string;
   sentiment: number | null;
 }
 
 export interface Conversation {
   id: string;
-  user_ids: string;
-  person_ids: string[];
-  start_of_conversation: string;
-  end_of_conversation: string | null;
+  started_at: string;
   topic_summary: string | null;
   context_summary: string | null;
+  is_active: boolean;
 }
 
 // Toast notifications
