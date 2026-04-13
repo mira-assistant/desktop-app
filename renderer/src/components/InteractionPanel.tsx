@@ -125,46 +125,45 @@ export default function InteractionPanel() {
   useEffect(() => {
     if (!window.electronAPI) return;
 
-    const isDuplicate = (interaction: Interaction): boolean => {
-      // Checks through all conversation groups for an interaction with the same id
-      return conversationGroups.some(group =>
-        group.interactions.some(i => i.id === interaction.id)
-      );
-    };
+    const handleNewInteraction = async (payload: any) => {
+      const interaction: Interaction = payload.data;
 
-    const handleNewInteraction = async (webhookPayload: any) => {
-      const interaction: Interaction = webhookPayload.data;
+      setConversationGroups(prev => {
+        const existingGroupIndex = prev.findIndex(
+          g => g.conversation?.id === interaction.conversation_id
+        );
 
-      // Check for duplicate interaction before proceeding
-      if (isDuplicate(interaction)) {
-        // Duplicate detected, discard
-        return;
-      }
-
-      // First, check if this is going to an existing conversation
-      const existingGroupIndex = conversationGroups.findIndex(
-        g => g.conversation?.id === interaction.conversation_id
-      );
-
-      if (existingGroupIndex !== -1) {
-        // Add to existing conversation
-        setConversationGroups(prev => {
+        if (existingGroupIndex !== -1) {
           const updated = [...prev];
           updated[existingGroupIndex] = {
             ...updated[existingGroupIndex],
             interactions: [...updated[existingGroupIndex].interactions, interaction],
           };
           return updated;
-        });
-      } else if (interaction.conversation_id) {
-        // New conversation detected
+        }
 
+        // Not found - it's a new conversation, will be handled below
+        return prev;
+      });
+
+      // Check if this is a new conversation (async operations outside setState)
+      setConversationGroups(prev => {
+        const exists = prev.some(g => g.conversation?.id === interaction.conversation_id);
+        return exists ? prev : prev; // No change if exists
+      });
+
+      // If new conversation, fetch metadata and add it
+      const existsInState = conversationGroups.some(
+        g => g.conversation?.id === interaction.conversation_id
+      );
+
+      if (!existsInState && interaction.conversation_id) {
         // Mark all previous conversations as inactive
         setConversationGroups(prev =>
           prev.map(group => ({
             ...group,
             isActive: false,
-            isExpanded: false, // Collapse old active conversations
+            isExpanded: false,
           }))
         );
 
@@ -175,11 +174,11 @@ export default function InteractionPanel() {
           const newGroup: ConversationGroup = {
             conversation,
             interactions: [interaction],
-            isExpanded: true, // Auto-expand new active conversation
-            isActive: conversation.topic_summary === null, // Active if no summary yet
+            isExpanded: true,
+            isActive: conversation.topic_summary === null,
           };
 
-          setConversationGroups(prev => [newGroup, ...prev]); // Add to top
+          setConversationGroups(prev => [newGroup, ...prev]);
         } catch (error) {
           console.error('Failed to fetch new conversation:', error);
 
@@ -193,7 +192,7 @@ export default function InteractionPanel() {
 
           setConversationGroups(prev => [newGroup, ...prev]);
         }
-      } else {
+      } else if (!interaction.conversation_id) {
         // Orphaned interaction (no conversation_id)
         const orphanGroup: ConversationGroup = {
           conversation: null,
@@ -206,8 +205,13 @@ export default function InteractionPanel() {
       }
     };
 
-    window.electronAPI.onNewInteraction(handleNewInteraction);
-  }, [conversationGroups]);
+    const cleanup = window.electronAPI.onNewInteraction(handleNewInteraction);
+
+    // Cleanup function to remove listener
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, []);
 
   // Fetch person details
   useEffect(() => {

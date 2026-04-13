@@ -123,7 +123,12 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
       setIsTogglingService(false);
     };
 
-    window.electronAPI.onServiceStatusChanged(handleServiceStatusChanged);
+    const cleanup = window.electronAPI.onServiceStatusChanged(handleServiceStatusChanged);
+
+    // Cleanup function to remove listener
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, []);
 
   const toggleService = useCallback(async () => {

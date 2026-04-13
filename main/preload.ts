@@ -20,11 +20,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   getWebhookUrl: () => ipcRenderer.invoke('get-webhook-url'),
 
-  onNewInteraction: (callback: (interaction: any) => void) =>
-    ipcRenderer.on('new-interaction', (_, interaction) => callback(interaction)),
+  onNewInteraction: (callback: (payload: any) => void) => {
+    const listener = (_event: any, payload: any) => callback(payload);
+    ipcRenderer.on('new-interaction', listener);
 
-  onServiceStatusChanged: (callback: (status: { enabled: boolean }) => void) =>
-    ipcRenderer.on('service-status-changed', (_, status) => callback(status)),
+    return () => {
+      ipcRenderer.removeListener('new-interaction', listener);
+    };
+  },
+
+  onServiceStatusChanged: (callback: (status: any) => void) => {
+    const listener = (_event: any, status: any) => callback(status);
+    ipcRenderer.on('service-status-changed', listener);
+
+    return () => {
+      ipcRenderer.removeListener('service-status-changed', listener);
+    };
+  },
 
   // OAuth
   loginWithGoogle: () => ipcRenderer.invoke('auth:google-oauth'),
