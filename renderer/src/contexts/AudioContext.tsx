@@ -91,10 +91,12 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isVADReady, setIsVADReady] = useState(false);
 
-  // Helper to get the absolute path to the assets folder
+  // VAD / ONNX load wasm via dynamic import(). A dev base of "/" becomes
+  // "/ort-wasm-*.mjs", which Vite treats as importing from /public (disallowed).
+  // Resolve BASE_URL against the document so paths are same-origin absolute URLs.
   function getAssetPath() {
     if (import.meta.env.DEV) {
-      return '/';
+      return new URL(import.meta.env.BASE_URL, window.location.href).href;
     }
     return window.location.href.replace('index.html', '').replace(/\/$/, '') + '/';
   }
