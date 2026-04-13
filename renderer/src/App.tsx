@@ -1,6 +1,8 @@
-'use client';
-
 import { useState } from 'react';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { ServiceProvider } from '@/contexts/ServiceContext';
+import { AudioProvider } from '@/contexts/AudioContext';
+import { ToastProvider } from '@/contexts/ToastContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/contexts/ToastContext';
 import LoginOverlay from '@/components/ui/LoginOverlay';
@@ -9,7 +11,7 @@ import MicrophoneButton from '@/components/MicrophoneButton';
 import InteractionPanel from '@/components/InteractionPanel';
 import Toast from '@/components/ui/Toast';
 
-export default function Home() {
+function AppShell() {
   const { isAuthenticated, isLoading } = useAuth();
   const { toasts, removeToast } = useToast();
   const [isPeoplePanelOpen, setIsPeoplePanelOpen] = useState(false);
@@ -41,7 +43,6 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Toast Notifications */}
       <div className="fixed bottom-5 right-5 z-50 flex flex-col-reverse gap-2 pointer-events-none">
         {toasts.map((toast) => (
           <div key={toast.id} className="pointer-events-auto">
@@ -54,5 +55,19 @@ export default function Home() {
         ))}
       </div>
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <ToastProvider>
+      <AuthProvider>
+        <ServiceProvider>
+          <AudioProvider>
+            <AppShell />
+          </AudioProvider>
+        </ServiceProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }

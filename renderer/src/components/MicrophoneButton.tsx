@@ -1,4 +1,3 @@
-'use client';
 
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -31,13 +30,6 @@ export default function MicrophoneButton({ disableSpaceToggle = false }: Microph
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isTogglingService, toggleService, disableSpaceToggle]);
-
-  const getStatusText = () => {
-    if (isTogglingService && !isServiceEnabled) return 'Enabling Mira...';
-    if (isTogglingService && isServiceEnabled) return 'Disabling Mira...';
-    if (isServiceEnabled) return 'Mira is listening';
-    return 'Click or press Space to enable';
-  };
 
   const handleClick = async () => {
     if (isTogglingService) return;

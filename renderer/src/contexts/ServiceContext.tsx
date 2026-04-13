@@ -1,4 +1,3 @@
-'use client';
 
 import { createContext, useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';

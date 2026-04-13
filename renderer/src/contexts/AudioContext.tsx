@@ -1,4 +1,3 @@
-'use client';
 
 import { createContext, useEffect, useState } from 'react';
 import { useMicVAD } from '@ricky0123/vad-react';
@@ -94,11 +93,9 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
   // Helper to get the absolute path to the assets folder
   function getAssetPath() {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       return '/';
     }
-    // In production, we are in file://.../renderer/out/index.html
-    // We want to return file://.../renderer/out/
     return window.location.href.replace('index.html', '').replace(/\/$/, '') + '/';
   }
 

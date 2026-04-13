@@ -1,9 +1,8 @@
-'use client';
 
 import { createContext, useCallback, useEffect, useState } from 'react';
 import { api } from '@shared/api/client';
 import { authApi } from '@/lib/api/auth';
-import { User, AuthTokens, LoginCredentials, RegisterData } from '@/types/auth.types';
+import { AuthTokens, LoginCredentials, RegisterData } from '@/types/auth.types';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -62,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Retry original request with new token
             originalRequest.headers.Authorization = `Bearer ${newTokens.accessToken}`;
             return api(originalRequest);
-          } catch (refreshError) {
+          } catch (_refreshError) {
             // Refresh failed, clear everything
             console.error('Token refresh failed, logging out');
 
@@ -75,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setTokens(null);
             setIsAuthenticated(false);
 
-            return Promise.reject(refreshError);
+            return Promise.reject(_refreshError);
           }
         }
 
@@ -114,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setIsAuthenticated(true);
 
               console.log('Authentication verified');
-            } catch (refreshError) {
+            } catch (_refreshError) {
               // Tokens are invalid, clear them
               console.error('Token verification failed, clearing tokens');
               await window.electronAPI.clearTokens();
