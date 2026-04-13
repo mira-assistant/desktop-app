@@ -337,9 +337,9 @@ export default function InteractionPanel() {
 
   return (
     <>
-      <div className="flex flex-col h-full bg-gradient-to-br from-white to-[#f0fffa] rounded-none overflow-hidden border-l border-[#80ffdb]">
+      <div className="flex flex-col h-full bg-linear-to-br from-white to-[#f0fffa] rounded-none overflow-hidden border-l border-[#80ffdb]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-6 border-b border-[#80ffdb] bg-gradient-to-r from-[#f0fffa] to-white">
+        <div className="flex items-center justify-between px-6 py-6 border-b border-[#80ffdb] bg-linear-to-r from-[#f0fffa] to-white">
           <h2 className="text-xl font-semibold text-[#1f2937]">Interactions</h2>
           <button
             onClick={handleClearAll}
@@ -371,7 +371,7 @@ export default function InteractionPanel() {
                 {/* Conversation Card */}
                 <div className="bg-white rounded-xl border border-[#e5e7eb] overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   {/* Conversation Header */}
-                  <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-[#f9fafb] to-white border-b border-[#e5e7eb]">
+                  <div className="flex items-center gap-3 p-4 bg-linear-to-r from-[#f9fafb] to-white border-b border-[#e5e7eb]">
                     <button
                       onClick={() => toggleConversation(groupIndex)}
                       className="flex items-center gap-3 flex-1 text-left group"
@@ -443,7 +443,7 @@ export default function InteractionPanel() {
                                 <div className="flex items-start gap-3 p-3">
                                   {/* Avatar */}
                                   <div
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
                                     style={{ backgroundColor: colors.border }}
                                   >
                                     {person.label[0].toUpperCase()}
@@ -470,7 +470,7 @@ export default function InteractionPanel() {
                                   {/* Delete Button */}
                                   <button
                                     onClick={() => setDeleteInteractionModal(interaction.id)}
-                                    className="w-7 h-7 flex items-center justify-center rounded-md opacity-0 group-hover/interaction:opacity-100 hover:bg-red-50 text-red-400 hover:text-red-600 transition-all flex-shrink-0"
+                                    className="w-7 h-7 flex items-center justify-center rounded-md opacity-0 group-hover/interaction:opacity-100 hover:bg-red-50 text-red-400 hover:text-red-600 transition-all shrink-0"
                                     title="Delete interaction"
                                   >
                                     <i className="fas fa-trash text-xs" />

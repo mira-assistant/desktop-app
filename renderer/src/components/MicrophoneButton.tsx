@@ -57,15 +57,15 @@ export default function MicrophoneButton({ disableSpaceToggle = false }: Microph
           isTogglingService
             ? 'bg-[#6b7280] cursor-not-allowed opacity-60'
             : isServiceEnabled
-              ? 'bg-gradient-to-br from-[#ff4444] to-[#e53e3e] shadow-[0_10px_30px_rgba(255,68,68,0.6),0_0_30px_rgba(255,68,68,0.4),0_0_60px_rgba(255,68,68,0.2)] cursor-pointer'
-              : 'bg-gradient-to-br from-[#00ff88] to-[#00e676] shadow-[0_5px_20px_rgba(0,255,136,0.3)] hover:shadow-[0_15px_40px_rgba(0,255,136,0.7),0_0_40px_rgba(0,255,136,0.5),0_0_80px_rgba(0,255,136,0.3)] cursor-pointer'
+              ? 'bg-linear-to-br from-[#ff4444] to-[#e53e3e] shadow-[0_10px_30px_rgba(255,68,68,0.6),0_0_30px_rgba(255,68,68,0.4),0_0_60px_rgba(255,68,68,0.2)] cursor-pointer'
+              : 'bg-linear-to-br from-[#00ff88] to-[#00e676] shadow-[0_5px_20px_rgba(0,255,136,0.3)] hover:shadow-[0_15px_40px_rgba(0,255,136,0.7),0_0_40px_rgba(0,255,136,0.5),0_0_80px_rgba(0,255,136,0.3)] cursor-pointer'
         )}
       >
         {/* Red Ripple Waves - when service enabled */}
         {isServiceEnabled && !isTogglingService && (
           <>
             <motion.div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100%] h-[100%] border-2 border-[rgba(255,68,68,0.6)] rounded-full bg-transparent pointer-events-none"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full border-2 border-[rgba(255,68,68,0.6)] rounded-full bg-transparent pointer-events-none"
               animate={{
                 scale: [1.05, 2],
                 opacity: [0, 0.6, 0]
@@ -77,7 +77,7 @@ export default function MicrophoneButton({ disableSpaceToggle = false }: Microph
               }}
             />
             <motion.div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100%] h-[100%] border-2 border-[rgba(255,68,68,0.6)] rounded-full bg-transparent pointer-events-none"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full border-2 border-[rgba(255,68,68,0.6)] rounded-full bg-transparent pointer-events-none"
               animate={{
                 scale: [1.05, 2],
                 opacity: [0, 0.6, 0]
@@ -90,7 +90,7 @@ export default function MicrophoneButton({ disableSpaceToggle = false }: Microph
               }}
             />
             <motion.div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100%] h-[100%] border-2 border-[rgba(255,68,68,0.6)] rounded-full bg-transparent pointer-events-none"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full border-2 border-[rgba(255,68,68,0.6)] rounded-full bg-transparent pointer-events-none"
               animate={{
                 scale: [1.05, 2],
                 opacity: [0, 0.6, 0]
@@ -108,7 +108,7 @@ export default function MicrophoneButton({ disableSpaceToggle = false }: Microph
         {/* Green pulse effect when disabled (inactive) */}
         {!isServiceEnabled && !isTogglingService && (
           <motion.div
-            className="absolute inset-0 rounded-full bg-gradient-to-br from-[#00ff88] to-[#00e676] opacity-0"
+            className="absolute inset-0 rounded-full bg-linear-to-br from-[#00ff88] to-[#00e676] opacity-0"
             animate={{
               opacity: [0, 0.3, 0],
               scale: [1, 1.1, 1]

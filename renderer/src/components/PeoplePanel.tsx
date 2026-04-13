@@ -184,7 +184,7 @@ export default function PeoplePanel({ isOpen, onClose, excludeElement }: PeopleP
                         className="group p-3 rounded-lg border border-[#e5e7eb] bg-white hover:border-[#80ffdb] hover:shadow-sm transition-all"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-[#e6fffa] to-[#ccffee] text-[#00cc6a] font-semibold text-sm flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-linear-to-br from-[#e6fffa] to-[#ccffee] text-[#00cc6a] font-semibold text-sm shrink-0">
                             {person.name ? person.name[0].toUpperCase() : person.index}
                           </div>
 

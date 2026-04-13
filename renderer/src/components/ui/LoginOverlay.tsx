@@ -121,7 +121,7 @@ export default function LoginOverlay() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-[#00ff88]/10 via-[#00cc6a]/5 to-[#80ffdb]/10 backdrop-blur-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-linear-to-br from-[#00ff88]/10 via-[#00cc6a]/5 to-[#80ffdb]/10 backdrop-blur-xl">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -129,8 +129,8 @@ export default function LoginOverlay() {
         className="relative bg-white/95 backdrop-blur-2xl rounded-3xl shadow-[0_20px_70px_rgba(0,255,136,0.15)] p-8 w-full max-w-md border border-[#80ffdb]/20"
       >
         {/* Decorative gradient orb */}
-        <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-[#00ff88] to-[#00cc6a] rounded-full blur-3xl opacity-20" />
-        <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-gradient-to-tr from-[#80ffdb] to-[#00ff88] rounded-full blur-3xl opacity-20" />
+        <div className="absolute -top-20 -right-20 w-40 h-40 bg-linear-to-br from-[#00ff88] to-[#00cc6a] rounded-full blur-3xl opacity-20" />
+        <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-linear-to-tr from-[#80ffdb] to-[#00ff88] rounded-full blur-3xl opacity-20" />
 
         {/* Logo */}
         <motion.div
@@ -139,10 +139,10 @@ export default function LoginOverlay() {
           transition={{ delay: 0.1 }}
           className="text-center mb-8 relative z-10"
         >
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#00ff88] to-[#00cc6a] rounded-2xl mb-4 shadow-lg shadow-[#00ff88]/30">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-[#00ff88] to-[#00cc6a] rounded-2xl mb-4 shadow-lg shadow-[#00ff88]/30">
             <i className="fas fa-microphone-alt text-2xl text-white" />
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-[#00cc6a] to-[#00ff88] bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-linear-to-r from-[#00cc6a] to-[#00ff88] bg-clip-text text-transparent">
             Welcome to Mira
           </h1>
           <p className="text-sm text-[#6b7280] mt-2">Your intelligent voice assistant</p>
@@ -194,7 +194,7 @@ export default function LoginOverlay() {
                   disabled={loading}
                   whileHover={{ scale: loading ? 1 : 1.02 }}
                   whileTap={{ scale: loading ? 1 : 0.98 }}
-                  className="w-full py-3 bg-gradient-to-r from-[#00ff88] to-[#00cc6a] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-[#00ff88]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                  className="w-full py-3 bg-linear-to-r from-[#00ff88] to-[#00cc6a] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-[#00ff88]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -263,7 +263,7 @@ export default function LoginOverlay() {
                   disabled={loading}
                   whileHover={{ scale: loading ? 1 : 1.02 }}
                   whileTap={{ scale: loading ? 1 : 0.98 }}
-                  className="w-full py-3 bg-gradient-to-r from-[#00ff88] to-[#00cc6a] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-[#00ff88]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                  className="w-full py-3 bg-linear-to-r from-[#00ff88] to-[#00cc6a] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-[#00ff88]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">

@@ -18,7 +18,7 @@ function AppShell() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-[#00ff88] to-[#00cc6a]">
+      <div className="flex items-center justify-center h-screen bg-linear-to-br from-[#00ff88] to-[#00cc6a]">
         <div className="flex flex-col items-center gap-4">
           <i className="fas fa-microphone-alt text-6xl text-white animate-pulse" />
           <p className="text-white text-xl font-medium">Loading Mira...</p>
@@ -34,7 +34,7 @@ function AppShell() {
       <Header isPeoplePanelOpen={isPeoplePanelOpen} setIsPeoplePanelOpen={setIsPeoplePanelOpen} />
 
       <main className="flex-1 flex overflow-hidden">
-        <div className="flex-1 flex items-center justify-center px-10 py-10 bg-gradient-to-br from-[#f0fffa] to-[#f0fffa]">
+        <div className="flex-1 flex items-center justify-center px-10 py-10 bg-linear-to-br from-[#f0fffa] to-[#f0fffa]">
           <MicrophoneButton disableSpaceToggle={isPeoplePanelOpen} />
         </div>
 
