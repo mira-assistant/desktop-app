@@ -1,5 +1,5 @@
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Interaction, Person, Conversation } from '@/types/models.types';
 import { personsApi } from '@/lib/api/persons';
@@ -9,38 +9,69 @@ import { useService } from '@/hooks/useService';
 import { useToast } from '@/contexts/ToastContext';
 import Modal from '@/components/ui/Modal';
 
-interface ConversationGroup {
+const ORPHAN_KEY = '__orphan__';
+
+/** Stable bucket id: conversation row id, else first known interaction conversation_id, else orphan sentinel. */
+function groupKey(g: { conversation: Conversation | null; interactions: Interaction[] }): string {
+  if (g.conversation?.id) return g.conversation.id;
+  const cid = g.interactions.find(i => i.conversation_id?.trim())?.conversation_id?.trim();
+  return cid || ORPHAN_KEY;
+}
+
+function interactionKey(i: Interaction): string {
+  return i.conversation_id?.trim() || ORPHAN_KEY;
+}
+
+function latestInteraction(groups: { interactions: Interaction[] }[]): Interaction | null {
+  const all = groups.flatMap(g => g.interactions);
+  if (all.length === 0) return null;
+  return all.reduce((a, b) =>
+    new Date(b.timestamp).getTime() > new Date(a.timestamp).getTime() ? b : a
+  );
+}
+
+function activeConversationKey(groups: { interactions: Interaction[] }[]): string {
+  const latest = latestInteraction(groups);
+  return latest ? interactionKey(latest) : ORPHAN_KEY;
+}
+
+function findGroupIndex(
+  groups: { conversation: Conversation | null; interactions: Interaction[] }[],
+  interaction: Interaction
+): number {
+  const key = interactionKey(interaction);
+  return groups.findIndex(g => groupKey(g) === key);
+}
+
+function appendDedupe(
+  groups: ConversationGroupState[],
+  index: number,
+  interaction: Interaction,
+  conversation: Conversation | null
+): ConversationGroupState[] {
+  const group = groups[index];
+  if (group.interactions.some(i => i.id === interaction.id)) {
+    return groups;
+  }
+  const next = [...groups];
+  next[index] = {
+    ...group,
+    conversation: conversation ?? group.conversation,
+    interactions: [...group.interactions, interaction],
+  };
+  return next;
+}
+
+interface ConversationGroupState {
   conversation: Conversation | null;
   interactions: Interaction[];
-  isExpanded: boolean;
+  /** When set, user has toggled expand/collapse; otherwise UI derives from active conversation */
+  isExpanded?: boolean;
+}
+
+interface ConversationGroupView extends ConversationGroupState {
   isActive: boolean;
-}
-
-/** Matches backend `Conversation.is_active`, with a safe fallback for older payloads. */
-function conversationIsActive(c: Conversation | null): boolean {
-  if (!c) return false;
-  if (typeof c.is_active === 'boolean') return c.is_active;
-  return c.topic_summary === null;
-}
-
-function getEffectiveConversationId(group: ConversationGroup): string | null {
-  if (group.conversation?.id) return group.conversation.id;
-  const cid = group.interactions.find(i => i.conversation_id)?.conversation_id;
-  return cid ?? null;
-}
-
-function isOrphanConversationGroup(group: ConversationGroup): boolean {
-  if (group.conversation) return false;
-  if (group.interactions.length === 0) return true;
-  return group.interactions.every(i => !i.conversation_id);
-}
-
-function findMergeGroupIndex(groups: ConversationGroup[], interaction: Interaction): number {
-  const convId = interaction.conversation_id?.trim() || null;
-  if (convId) {
-    return groups.findIndex(g => getEffectiveConversationId(g) === convId);
-  }
-  return groups.findIndex(g => isOrphanConversationGroup(g));
+  isExpanded: boolean;
 }
 
 export default function InteractionPanel() {
@@ -48,13 +79,18 @@ export default function InteractionPanel() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
 
-  const [conversationGroups, setConversationGroups] = useState<ConversationGroup[]>([]);
-  const conversationGroupsRef = useRef<ConversationGroup[]>([]);
+  const [conversationGroups, setConversationGroups] = useState<ConversationGroupState[]>([]);
   const [persons, setPersons] = useState<Map<string, Person>>(new Map());
   const [loading, setLoading] = useState(false);
 
-  useLayoutEffect(() => {
-    conversationGroupsRef.current = conversationGroups;
+  const displayGroups: ConversationGroupView[] = useMemo(() => {
+    const activeKey = activeConversationKey(conversationGroups);
+    return conversationGroups.map(g => {
+      const gkey = groupKey(g);
+      const isActive = gkey === activeKey;
+      const isExpanded = g.isExpanded !== undefined ? g.isExpanded : isActive;
+      return { ...g, isActive, isExpanded };
+    });
   }, [conversationGroups]);
 
   // Delete modals
@@ -75,10 +111,8 @@ export default function InteractionPanel() {
     const loadData = async () => {
       setLoading(true);
       try {
-        // 1. Fetch all interactions
         const interactions = await interactionsApi.getAll();
 
-        // 2. Group by conversation_id
         const conversationIds = new Set<string>();
         const interactionGroups = new Map<string | null, Interaction[]>();
 
@@ -90,7 +124,6 @@ export default function InteractionPanel() {
           interactionGroups.set(convId, [...existing, interaction]);
         });
 
-        // 3. Fetch conversation metadata for unique IDs
         const conversationMap = new Map<string, Conversation>();
         if (conversationIds.size > 0) {
           const conversations = await Promise.all(
@@ -104,8 +137,7 @@ export default function InteractionPanel() {
           });
         }
 
-        // 4. Amalgamate into ConversationGroup objects
-        const groups: ConversationGroup[] = [];
+        const groups: ConversationGroupState[] = [];
 
         for (const [conversationId, groupInteractions] of interactionGroups.entries()) {
           const sortedInteractions = groupInteractions.sort((a, b) =>
@@ -113,27 +145,19 @@ export default function InteractionPanel() {
           );
 
           if (conversationId === null) {
-            // Orphaned interactions
             groups.push({
               conversation: null,
               interactions: sortedInteractions,
-              isExpanded: false,
-              isActive: false,
             });
           } else {
-            const conversation = conversationMap.get(conversationId);
-            const isActive = conversationIsActive(conversation ?? null);
-
+            const conversation = conversationMap.get(conversationId) ?? null;
             groups.push({
-              conversation: conversation || null,
+              conversation,
               interactions: sortedInteractions,
-              isExpanded: isActive, // Auto-expand active conversations
-              isActive,
             });
           }
         }
 
-        // 5. Sort by start time (newest first)
         groups.sort((a, b) => {
           const aTime = a.conversation?.started_at || a.interactions[0]?.timestamp || '';
           const bTime = b.conversation?.started_at || b.interactions[0]?.timestamp || '';
@@ -159,108 +183,71 @@ export default function InteractionPanel() {
     const handleNewInteraction = async (payload: any) => {
       const interaction: Interaction = payload.data;
 
-      const appendToGroup = (
-        groups: ConversationGroup[],
-        index: number,
-        conv: Conversation | null
-      ): ConversationGroup[] => {
-        const group = groups[index];
-        if (group.interactions.some(i => i.id === interaction.id)) {
-          return groups;
+      let handledSync = false;
+      setConversationGroups(prev => {
+        const idx = findGroupIndex(prev, interaction);
+        if (idx !== -1) {
+          handledSync = true;
+          return appendDedupe(prev, idx, interaction, null);
         }
-        const mergedConversation = conv ?? group.conversation;
-        const isActive = conversationIsActive(mergedConversation);
-        const next = [...groups];
-        next[index] = {
-          ...group,
-          conversation: mergedConversation,
-          interactions: [...group.interactions, interaction],
-          isExpanded: isActive ? true : group.isExpanded,
-          isActive,
-        };
-        return next;
-      };
-
-      // Use a layout-synced ref so we do not rely on mutating outer vars inside setState
-      // updaters (that can run asynchronously and used to race the "new conversation" path).
-      const snapshot = conversationGroupsRef.current;
-      const mergeIdx = findMergeGroupIndex(snapshot, interaction);
-
-      if (mergeIdx !== -1) {
-        setConversationGroups(prev => {
-          const idx = findMergeGroupIndex(prev, interaction);
-          if (idx === -1) return prev;
-          return appendToGroup(prev, idx, null);
-        });
-        return;
-      }
-
-      const convId = interaction.conversation_id?.trim() || null;
-
-      if (!convId) {
-        setConversationGroups(prev => {
-          const idx = findMergeGroupIndex(prev, interaction);
-          if (idx !== -1) {
-            return appendToGroup(prev, idx, null);
+        if (!interaction.conversation_id?.trim()) {
+          handledSync = true;
+          const orphanIdx = prev.findIndex(g => groupKey(g) === ORPHAN_KEY);
+          if (orphanIdx !== -1) {
+            return appendDedupe(prev, orphanIdx, interaction, null);
           }
-          const orphanGroup: ConversationGroup = {
-            conversation: null,
-            interactions: [interaction],
-            isExpanded: false,
-            isActive: false,
-          };
-          return [orphanGroup, ...prev];
-        });
+          return [
+            {
+              conversation: null,
+              interactions: [interaction],
+            },
+            ...prev,
+          ];
+        }
+        return prev;
+      });
+
+      if (handledSync) {
         return;
       }
 
-      setConversationGroups(prev =>
-        prev.map(group => ({
-          ...group,
-          isActive: false,
-          isExpanded: false,
-        }))
-      );
+      const convId = interaction.conversation_id.trim();
 
       try {
         const conversation = await conversationsApi.getById(convId);
 
         setConversationGroups(prev => {
-          const idx = findMergeGroupIndex(prev, interaction);
+          const idx = findGroupIndex(prev, interaction);
           if (idx !== -1) {
-            return appendToGroup(prev, idx, conversation);
+            return appendDedupe(prev, idx, interaction, conversation);
           }
-          const isActive = conversationIsActive(conversation);
-          const newGroup: ConversationGroup = {
+          const nextGroup: ConversationGroupState = {
             conversation,
             interactions: [interaction],
-            isExpanded: true,
-            isActive,
           };
-          return [newGroup, ...prev];
+          return [nextGroup, ...prev];
         });
       } catch (error) {
         console.error('Failed to fetch new conversation:', error);
 
         setConversationGroups(prev => {
-          const idx = findMergeGroupIndex(prev, interaction);
+          const idx = findGroupIndex(prev, interaction);
           if (idx !== -1) {
-            return appendToGroup(prev, idx, null);
+            return appendDedupe(prev, idx, interaction, null);
           }
-          const newGroup: ConversationGroup = {
-            conversation: null,
-            interactions: [interaction],
-            isExpanded: true,
-            isActive: true,
-          };
-          return [newGroup, ...prev];
+          return [
+            {
+              conversation: null,
+              interactions: [interaction],
+            },
+            ...prev,
+          ];
         });
       }
     };
 
     const cleanup = window.electronAPI.onNewInteraction(handleNewInteraction);
 
-    // Cleanup function to remove listener
     return () => {
       if (cleanup) cleanup();
     };
@@ -307,11 +294,15 @@ export default function InteractionPanel() {
   }, [conversationGroups]);
 
   const toggleConversation = (index: number) => {
-    setConversationGroups(prev =>
-      prev.map((group, i) =>
-        i === index ? { ...group, isExpanded: !group.isExpanded } : group
-      )
-    );
+    setConversationGroups(prev => {
+      const activeKey = activeConversationKey(prev);
+      return prev.map((g, i) => {
+        if (i !== index) return g;
+        const derived =
+          g.isExpanded !== undefined ? g.isExpanded : groupKey(g) === activeKey;
+        return { ...g, isExpanded: !derived };
+      });
+    });
   };
 
   const handleDeleteInteraction = async (interactionId: string) => {
@@ -319,10 +310,12 @@ export default function InteractionPanel() {
       await interactionsApi.delete(interactionId);
 
       setConversationGroups(prev =>
-        prev.map(group => ({
-          ...group,
-          interactions: group.interactions.filter(i => i.id !== interactionId)
-        })).filter(group => group.interactions.length > 0)
+        prev
+          .map(group => ({
+            ...group,
+            interactions: group.interactions.filter(i => i.id !== interactionId),
+          }))
+          .filter(group => group.interactions.length > 0)
       );
 
       showToast('Interaction deleted', 'success');
@@ -334,15 +327,14 @@ export default function InteractionPanel() {
 
   const handleDeleteConversation = async (conversationId: string) => {
     try {
-      const group = conversationGroups.find(g => g.conversation?.id === conversationId);
+      const group = conversationGroups.find(
+        g => g.conversation?.id === conversationId || groupKey(g) === conversationId
+      );
       if (!group) return;
 
-      // Delete all interactions in conversation
       await Promise.all(group.interactions.map(i => interactionsApi.delete(i.id)));
 
-      setConversationGroups(prev =>
-        prev.filter(g => g.conversation?.id !== conversationId)
-      );
+      setConversationGroups(prev => prev.filter(g => groupKey(g) !== conversationId));
 
       showToast('Conversation deleted', 'success');
     } catch (error) {
@@ -351,7 +343,7 @@ export default function InteractionPanel() {
     }
   };
 
-  const getConversationTitle = (group: ConversationGroup): string => {
+  const getConversationTitle = (group: ConversationGroupView): string => {
     if (group.isActive) return 'Active Conversation';
     if (group.conversation?.topic_summary) return group.conversation.topic_summary;
     if (!group.conversation && group.interactions.length > 0) return 'Untitled Conversation';
@@ -360,13 +352,15 @@ export default function InteractionPanel() {
 
   const handleClearAll = async () => {
     try {
-      await Promise.all(conversationGroups.map(async (group) => {
-        if (group.conversation) {
-          await conversationsApi.delete(group.conversation.id);
-        } else {
-          await Promise.all(group.interactions.map((interaction) => interactionsApi.delete(interaction.id)));
-        }
-      }));
+      await Promise.all(
+        conversationGroups.map(async group => {
+          if (group.conversation) {
+            await conversationsApi.delete(group.conversation.id);
+          } else {
+            await Promise.all(group.interactions.map(interaction => interactionsApi.delete(interaction.id)));
+          }
+        })
+      );
       const allInteractions = conversationGroups.flatMap(g => g.interactions);
       await Promise.all(allInteractions.map(i => interactionsApi.delete(i.id)));
       setConversationGroups([]);
@@ -411,7 +405,7 @@ export default function InteractionPanel() {
             <div className="flex items-center justify-center h-full">
               <i className="fas fa-spinner fa-spin text-3xl text-[#00cc6a]" />
             </div>
-          ) : conversationGroups.length === 0 ? (
+          ) : displayGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <i className="fas fa-robot text-5xl text-[#9ca3af] opacity-50 mb-4" />
               <p className="text-lg font-medium text-[#9ca3af] mb-2">No conversations yet</p>
@@ -420,7 +414,7 @@ export default function InteractionPanel() {
               </small>
             </div>
           ) : (
-            conversationGroups.map((group, groupIndex) => (
+            displayGroups.map((group, groupIndex) => (
               <div key={group.conversation?.id || `orphan-${groupIndex}`} className="space-y-2">
                 {/* Conversation Card */}
                 <div className="bg-white rounded-xl border border-[#e5e7eb] overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -485,7 +479,7 @@ export default function InteractionPanel() {
                         className="overflow-hidden"
                       >
                         <div className="p-4 space-y-2 bg-[#fafbfc]">
-                          {group.interactions.map((interaction) => {
+                          {group.interactions.map(interaction => {
                             const person = getPersonDisplay(interaction.person_id);
                             const colors = getPersonColor(person.index);
 
