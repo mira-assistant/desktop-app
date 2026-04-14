@@ -6,6 +6,7 @@ import { ToastProvider } from '@/contexts/ToastContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/contexts/ToastContext';
 import LoginOverlay from '@/components/ui/LoginOverlay';
+import ActionWebhookBanners from '@/components/ui/ActionWebhookBanners';
 import Header from '@/components/Header';
 import MicrophoneButton from '@/components/MicrophoneButton';
 import InteractionPanel from '@/components/InteractionPanel';
@@ -28,8 +29,10 @@ function AppShell() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[rgba(255,255,255,0.95)] backdrop-blur-[2px] border border-[rgba(0,255,136,0.2)]">
+    <div className="flex flex-col h-screen bg-[rgba(255,255,255,0.95)] backdrop-blur-[2px]">
       {!isAuthenticated && <LoginOverlay />}
+
+      {isAuthenticated && <ActionWebhookBanners />}
 
       <Header isPeoplePanelOpen={isPeoplePanelOpen} setIsPeoplePanelOpen={setIsPeoplePanelOpen} />
 

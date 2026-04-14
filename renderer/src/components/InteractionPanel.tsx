@@ -1,6 +1,5 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Interaction, Person, Conversation } from '@/types/models.types';
 import { personsApi } from '@/lib/api/persons';
 import { interactionsApi } from '@/lib/api/interactions';
@@ -456,121 +455,148 @@ export default function InteractionPanel() {
           ) : (
             displayGroups.map((group, groupIndex) => (
               <div key={group.conversation?.id || `orphan-${groupIndex}`} className="space-y-2">
-                {/* Conversation Card */}
-                <div className="bg-white rounded-xl border border-[#e5e7eb] overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                  {/* Conversation Header */}
-                  <div className="flex items-center gap-3 p-4 bg-linear-to-r from-[#f9fafb] to-white border-b border-[#e5e7eb]">
-                    <button
-                      onClick={() => toggleConversation(groupIndex)}
-                      className="flex items-center gap-3 flex-1 text-left group"
-                    >
-                      <i
-                        className={`fas fa-chevron-${group.isExpanded ? 'down' : 'right'} text-sm text-[#6b7280] transition-transform group-hover:text-[#00cc6a]`}
-                      />
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleConversation(groupIndex)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleConversation(groupIndex);
+                    }
+                  }}
+                  className="w-full min-w-0 cursor-pointer overflow-hidden rounded-xl border border-[#e5e7eb] bg-white shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-[#00ff88] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00ff88]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f0fffa]"
+                >
+                  <div className="flex w-full min-w-0 items-center gap-3 border-b border-[#e5e7eb] bg-linear-to-r from-[#f9fafb] to-white p-4">
+                    <div className="group/header flex min-w-0 flex-1 items-center gap-3 text-left">
+                      <span
+                        className="flex h-5 w-5 shrink-0 items-center justify-center text-[#6b7280] transition-colors group-hover/header:text-[#00cc6a]"
+                        aria-hidden
+                      >
+                        <i
+                          className={`fas fa-chevron-${group.isExpanded ? 'down' : 'right'} text-xs leading-none`}
+                        />
+                      </span>
 
-                      {group.isActive && (
-                        <span className="inline-block w-2 h-2 bg-[#00ff88] rounded-full animate-pulse" />
-                      )}
+                      {group.isActive ? (
+                        <span
+                          className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#00ff88] animate-pulse"
+                          aria-hidden
+                        />
+                      ) : null}
 
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold text-[#1f2937] flex items-center gap-2">
-                          {getConversationTitle(group)}
+                      <div className="min-w-0 flex-1 overflow-hidden py-0.5">
+                        <h3 className="text-sm font-semibold text-[#1f2937]">
+                          <span className="block truncate" title={getConversationTitle(group)}>
+                            {getConversationTitle(group)}
+                          </span>
                         </h3>
-                        {group.conversation?.context_summary && !group.isActive && (
-                          <p className="text-xs text-[#9ca3af] truncate mt-0.5">
+                        {group.isActive && group.conversation?.topic_summary ? (
+                          <p
+                            className="mt-0.5 truncate text-xs text-[#9ca3af]"
+                            title={group.conversation.topic_summary}
+                          >
+                            {group.conversation.topic_summary}
+                          </p>
+                        ) : null}
+                        {group.conversation?.context_summary ? (
+                          <p
+                            className="mt-0.5 truncate text-xs text-[#9ca3af]"
+                            title={group.conversation.context_summary}
+                          >
                             {group.conversation.context_summary}
                           </p>
-                        )}
+                        ) : null}
                       </div>
 
-                      <div className="flex items-center gap-4 text-xs text-[#9ca3af]">
-                        <span className="flex items-center gap-1">
-                          <i className="fas fa-comment" />
+                      <div className="flex shrink-0 flex-col items-end justify-center gap-0.5 text-xs text-[#9ca3af] sm:flex-row sm:items-center sm:gap-4">
+                        <span className="flex items-center gap-1 whitespace-nowrap tabular-nums">
+                          <i className="fas fa-comment text-[11px] opacity-80" aria-hidden />
                           {group.interactions.length}
                         </span>
-                        <span>
+                        <span className="whitespace-nowrap">
                           {formatLocalDate(
                             group.conversation?.started_at || group.interactions[0]?.timestamp
                           )}
                         </span>
                       </div>
-                    </button>
+                    </div>
 
-                    {/* Delete Conversation Button */}
-                    {group.conversation && (
+                    {group.conversation ? (
                       <button
-                        onClick={() => setDeleteConversationModal(group.conversation!.id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation();
+                          setDeleteConversationModal(group.conversation!.id);
+                        }}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-lg text-red-400 transition-colors hover:bg-red-50 hover:text-red-600"
                         title="Delete conversation"
                       >
-                        <i className="fas fa-trash text-xs" />
+                        <i className="fas fa-trash text-xs" aria-hidden />
                       </button>
-                    )}
+                    ) : null}
                   </div>
 
-                  {/* Interactions (Expanded) */}
-                  <AnimatePresence>
-                    {group.isExpanded && (
-                      <motion.div
-                        initial={{ height: 0 }}
-                        animate={{ height: 'auto' }}
-                        exit={{ height: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="p-4 space-y-2 bg-[#fafbfc]">
-                          {group.interactions.map(interaction => {
-                            const person = getPersonDisplay(interaction.person_id);
-                            const colors = getPersonColor(person.index);
+                  <div
+                    className={`grid w-full min-w-0 transition-[grid-template-rows] duration-300 ease-in-out motion-reduce:transition-none ${
+                      group.isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                    }`}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div className="min-h-0 overflow-hidden" inert={!group.isExpanded}>
+                      <div className="w-full min-w-0 space-y-2 bg-[#fafbfc] p-4">
+                        {group.interactions.map(interaction => {
+                          const person = getPersonDisplay(interaction.person_id);
+                          const colors = getPersonColor(person.index);
 
-                            return (
-                              <div
-                                key={interaction.id}
-                                className="group/interaction bg-white rounded-lg border border-[#e5e7eb] overflow-hidden hover:border-[#80ffdb] transition-all"
-                              >
-                                <div className="flex items-start gap-3 p-3">
-                                  {/* Avatar */}
-                                  <div
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-                                    style={{ backgroundColor: colors.border }}
-                                  >
-                                    {person.label[0].toUpperCase()}
-                                  </div>
-
-                                  {/* Content */}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span
-                                        className="text-xs font-semibold"
-                                        style={{ color: colors.text }}
-                                      >
-                                        {person.label}
-                                      </span>
-                                      <span className="text-[10px] text-[#9ca3af]">
-                                        {formatLocalTime(interaction.timestamp)}
-                                      </span>
-                                    </div>
-                                    <p className="text-sm text-[#1f2937] leading-relaxed">
-                                      {interaction.text}
-                                    </p>
-                                  </div>
-
-                                  {/* Delete Button */}
-                                  <button
-                                    onClick={() => setDeleteInteractionModal(interaction.id)}
-                                    className="w-7 h-7 flex items-center justify-center rounded-md opacity-0 group-hover/interaction:opacity-100 hover:bg-red-50 text-red-400 hover:text-red-600 transition-all shrink-0"
-                                    title="Delete interaction"
-                                  >
-                                    <i className="fas fa-trash text-xs" />
-                                  </button>
+                          return (
+                            <div
+                              key={interaction.id}
+                              className="group/interaction overflow-hidden rounded-lg border border-[#e5e7eb] bg-white transition-[border-color,box-shadow] duration-200 hover:border-[#80ffdb] hover:shadow-sm"
+                            >
+                              <div className="flex items-center gap-3 p-3">
+                                <div
+                                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                                  style={{ backgroundColor: colors.border }}
+                                >
+                                  {person.label[0].toUpperCase()}
                                 </div>
+
+                                <div className="min-w-0 flex-1 self-center py-0.5">
+                                  <div className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                    <span
+                                      className="text-xs font-semibold"
+                                      style={{ color: colors.text }}
+                                    >
+                                      {person.label}
+                                    </span>
+                                    <span className="text-[10px] tabular-nums text-[#9ca3af]">
+                                      {formatLocalTime(interaction.timestamp)}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm leading-relaxed text-[#1f2937]">
+                                    {interaction.text}
+                                  </p>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    setDeleteInteractionModal(interaction.id);
+                                  }}
+                                  className="flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-md text-red-400 opacity-0 transition-[opacity,background-color,color] duration-200 group-hover/interaction:opacity-100 hover:bg-red-50 hover:text-red-600"
+                                  title="Delete interaction"
+                                >
+                                  <i className="fas fa-trash text-xs" aria-hidden />
+                                </button>
                               </div>
-                            );
-                          })}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))

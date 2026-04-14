@@ -29,6 +29,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     };
   },
 
+  onWebhookAction: (callback: (payload: any) => void) => {
+    const listener = (_event: any, payload: any) => callback(payload);
+    ipcRenderer.on('webhook-action', listener);
+
+    return () => {
+      ipcRenderer.removeListener('webhook-action', listener);
+    };
+  },
+
   onServiceStatusChanged: (callback: (status: any) => void) => {
     const listener = (_event: any, status: any) => callback(status);
     ipcRenderer.on('service-status-changed', listener);
