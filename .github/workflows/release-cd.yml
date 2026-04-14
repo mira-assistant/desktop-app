@@ -1,0 +1,90 @@
+name: Release CD
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: macos
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Rebuild native modules for Electron (keytar)
+        run: npx --yes @electron/rebuild -f -w keytar
+
+      - name: Package installers (Windows)
+        if: matrix.platform == 'windows'
+        run: npm run package
+
+      - name: Package installers (macOS)
+        if: matrix.platform == 'macos'
+        env:
+          # Skip Apple code signing in CI (no certs on the runner)
+          CSC_IDENTITY_AUTO: "-"
+        run: npm run package
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.platform }}
+          path: release/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from package.json
+        id: pkg
+        run: |
+          VERSION=$(jq -r .version package.json)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: installers-windows
+          path: assets/windows
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: installers-macos
+          path: assets/macos
+
+      - uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.pkg.outputs.tag }}
+          name: Mira App ${{ steps.pkg.outputs.tag }}
+          commit: ${{ github.sha }}
+          allowUpdates: true
+          replacesArtifacts: true
+          artifactErrorsFailBuild: true
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+          artifacts: assets/windows/*.exe,assets/macos/*.dmg
+          token: ${{ secrets.GITHUB_TOKEN }}
