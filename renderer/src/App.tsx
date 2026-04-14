@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ServiceProvider } from '@/contexts/ServiceContext';
 import { AudioProvider } from '@/contexts/AudioContext';
@@ -30,7 +31,9 @@ function AppShell() {
 
   return (
     <div className="flex flex-col h-screen bg-[rgba(255,255,255,0.95)] backdrop-blur-[2px]">
-      {!isAuthenticated && <LoginOverlay />}
+      <AnimatePresence mode="wait">
+        {!isAuthenticated ? <LoginOverlay key="login-overlay" /> : null}
+      </AnimatePresence>
 
       {isAuthenticated && <ActionWebhookBanners />}
 

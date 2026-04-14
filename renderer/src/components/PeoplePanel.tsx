@@ -139,8 +139,8 @@ export default function PeoplePanel({ isOpen, onClose, excludeElement }: PeopleP
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-[73px] right-0 bottom-0 w-1/3 bg-white border-l border-[#e5e7eb] shadow-[-10px_0_30px_rgba(0,0,0,0.05)] z-40 flex flex-col"
+            transition={{ type: 'tween', duration: 0.34, ease: [0.32, 0.72, 0, 1] }}
+            className="fixed top-[73px] right-0 bottom-0 z-40 flex w-1/3 max-w-md transform-[translateZ(0)] flex-col border-l border-[#e5e7eb] bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.06)] will-change-transform"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb]">
@@ -174,14 +174,9 @@ export default function PeoplePanel({ isOpen, onClose, excludeElement }: PeopleP
                     const isEditing = editingId === person.id;
 
                     return (
-                      <motion.div
+                      <div
                         key={person.id}
-                        layout="position"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="group p-3 rounded-lg border border-[#e5e7eb] bg-white hover:border-[#80ffdb] hover:shadow-sm transition-all"
+                        className="group rounded-lg border border-[#e5e7eb] bg-white p-3 transition-[border-color,box-shadow] duration-200 hover:border-[#80ffdb] hover:shadow-sm"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full flex items-center justify-center bg-linear-to-br from-[#e6fffa] to-[#ccffee] text-[#00cc6a] font-semibold text-sm shrink-0">
@@ -247,7 +242,7 @@ export default function PeoplePanel({ isOpen, onClose, excludeElement }: PeopleP
                             )}
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
                     );
                   })}
                 </div>

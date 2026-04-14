@@ -76,9 +76,13 @@ export const authApi = {
    * Exchange GitHub OAuth code for tokens
    * POST /api/v2/auth/github/exchange
    */
-  gitHubExchange: async (code: string): Promise<AuthResponse> => {
+  gitHubExchange: async (
+    code: string,
+    redirectPort: number = 4280
+  ): Promise<AuthResponse> => {
     const { data } = await api.post<AuthResponse>(ENDPOINTS.AUTH_GITHUB_EXCHANGE, {
       code,
+      redirect_port: redirectPort,
     });
     return data;
   },

@@ -1,10 +1,13 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+
+const veilEase = [0.22, 1, 0.36, 1] as const;
+const veilDuration = (reduce: boolean | null) => (reduce ? 0.14 : 0.48);
 import { useAuth } from '@/hooks/useAuth';
 import { authApi } from '@/lib/api/auth';
 
 const glassInput =
-  'w-full rounded-xl border border-white/15 bg-black/25 px-3.5 py-2.5 text-sm text-white shadow-inner shadow-black/20 placeholder:text-white/40 backdrop-blur-sm transition-[border-color,background-color,box-shadow,opacity] duration-200 focus:border-[#00ff88]/50 focus:bg-black/35 focus:outline-none focus:ring-2 focus:ring-[#00ff88]/25 disabled:cursor-not-allowed disabled:opacity-40';
+  'w-full rounded-xl border border-slate-200/90 bg-white/55 px-3.5 py-2.5 text-sm text-slate-900 shadow-inner shadow-slate-900/5 placeholder:text-slate-400 backdrop-blur-md transition-[border-color,background-color,box-shadow,opacity] duration-200 focus:border-[#00cc6a]/55 focus:bg-white/75 focus:outline-none focus:ring-2 focus:ring-[#00ff88]/30 disabled:cursor-not-allowed disabled:opacity-40';
 
 export default function LoginOverlay() {
   const { login, register, saveTokens } = useAuth();
@@ -144,47 +147,56 @@ export default function LoginOverlay() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden px-4 py-8">
-      {/* Backdrop: depth + accent wash + glass blur */}
-      <div className="absolute inset-0 bg-linear-to-br from-slate-950 via-[#071218] to-[#041510]" aria-hidden />
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden px-4 py-8"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{
+        duration: veilDuration(prefersReducedMotion),
+        ease: veilEase,
+      }}
+    >
+      {/* Veil + blur: one opacity fade so blur reads as easing in/out with the glass. */}
+      <div className="absolute inset-0 bg-white/35" aria-hidden />
       <div
-        className="absolute inset-0 opacity-90 bg-[radial-gradient(ellipse_120%_80%_at_50%_-30%,rgba(0,255,136,0.22),transparent_55%)]"
+        className="absolute inset-0 bg-[radial-gradient(ellipse_100%_70%_at_50%_0%,rgba(0,255,136,0.14),transparent_55%)]"
         aria-hidden
       />
       <div
-        className="absolute inset-0 bg-[radial-gradient(circle_at_100%_20%,rgba(0,204,106,0.14),transparent_45%)]"
+        className="absolute inset-0 bg-[radial-gradient(circle_at_100%_30%,rgba(0,204,106,0.08),transparent_50%)]"
         aria-hidden
       />
+      <div className="absolute -left-24 top-1/3 h-64 w-64 rounded-full bg-emerald-200/35 blur-[90px]" aria-hidden />
+      <div className="absolute -right-20 bottom-1/4 h-72 w-72 rounded-full bg-teal-200/30 blur-[100px]" aria-hidden />
       <div
-        className="absolute inset-0 bg-[radial-gradient(circle_at_0%_100%,rgba(128,255,219,0.08),transparent_40%)]"
+        className="absolute inset-0 backdrop-blur-[28px] backdrop-saturate-150"
         aria-hidden
       />
-      <div className="absolute -left-32 top-1/4 h-72 w-72 rounded-full bg-[#00ff88]/12 blur-[100px]" aria-hidden />
-      <div className="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-[#00cc6a]/10 blur-[110px]" aria-hidden />
-      <div className="absolute inset-0 backdrop-blur-xl" aria-hidden />
 
       <motion.div
-        initial={{ opacity: 0, y: 16, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
+        initial={{ y: 18, scale: 0.98 }}
+        animate={{ y: 0, scale: 1 }}
         transition={{
-          duration: 0.35,
-          ease: [0.22, 1, 0.36, 1],
+          duration: prefersReducedMotion ? 0.16 : 0.36,
+          ease: veilEase,
+          delay: prefersReducedMotion ? 0 : 0.05,
         }}
-        className="relative w-full max-w-[420px] rounded-2xl border border-white/20 bg-white/8 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06)_inset] ring-1 ring-[#00ff88]/10 backdrop-blur-2xl"
+        className="relative w-full max-w-[420px] rounded-2xl border border-white/80 bg-white/50 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08),0_0_0_1px_rgba(255,255,255,0.85)_inset] ring-1 ring-[#00ff88]/20 backdrop-blur-2xl"
       >
         <div
-          className="pointer-events-none absolute inset-0 rounded-2xl bg-linear-to-b from-white/12 to-transparent opacity-60"
+          className="pointer-events-none absolute inset-0 rounded-2xl bg-linear-to-b from-white/70 via-white/25 to-emerald-100/25 opacity-90"
           aria-hidden
         />
 
         <div className="relative mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#00ff88]/35 bg-linear-to-br from-[#00ff88]/25 to-[#00cc6a]/10 shadow-[0_0_32px_rgba(0,255,136,0.2)] backdrop-blur-md">
-            <i className="fas fa-microphone-alt text-2xl text-[#b8ffe0]" aria-hidden />
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#00ff88]/40 bg-linear-to-br from-[#00ff88]/20 to-emerald-100/50 shadow-[0_8px_32px_rgba(0,204,106,0.15)] backdrop-blur-md">
+            <i className="fas fa-microphone-alt text-2xl text-[#00a855]" aria-hidden />
           </div>
-          <h1 className="bg-linear-to-r from-white via-[#e8fff4] to-[#7dffb8] bg-clip-text text-2xl font-semibold tracking-tight text-transparent">
+          <h1 className="bg-linear-to-r from-slate-800 via-slate-700 to-[#00a855] bg-clip-text text-2xl font-semibold tracking-tight text-transparent">
             Welcome to Mira
           </h1>
-          <p className="mt-2 text-sm text-white/55">Sign in to your intelligent voice workspace</p>
+          <p className="mt-2 text-sm text-slate-600">Sign in to your intelligent voice workspace</p>
         </div>
 
         <div className="relative">
@@ -211,7 +223,7 @@ export default function LoginOverlay() {
                 className="space-y-4"
               >
                 <div>
-                  <label htmlFor="login-email" className="mb-1.5 block text-xs font-medium text-[#9fe8c9]/90">
+                  <label htmlFor="login-email" className="mb-1.5 block text-xs font-medium text-slate-600">
                     Email
                   </label>
                   <input
@@ -227,7 +239,7 @@ export default function LoginOverlay() {
                 </div>
 
                 <div>
-                  <label htmlFor="login-password" className="mb-1.5 block text-xs font-medium text-[#9fe8c9]/90">
+                  <label htmlFor="login-password" className="mb-1.5 block text-xs font-medium text-slate-600">
                     Password
                   </label>
                   <input
@@ -245,7 +257,7 @@ export default function LoginOverlay() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-6 w-full rounded-xl bg-linear-to-r from-[#00e070] to-[#00b359] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_0_24px_rgba(0,255,136,0.25)] transition-[filter,box-shadow,opacity] hover:brightness-110 hover:shadow-[0_0_32px_rgba(0,255,136,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00ff88]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950/80 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-6 w-full rounded-xl border border-[#00cc6a]/30 bg-linear-to-r from-[#00e070] to-[#00b359] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(0,204,106,0.28)] transition-[filter,box-shadow,opacity] hover:brightness-110 hover:shadow-[0_10px_36px_rgba(0,204,106,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00ff88]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -268,7 +280,7 @@ export default function LoginOverlay() {
                 className="space-y-4"
               >
                 <div>
-                  <label htmlFor="register-email" className="mb-1.5 block text-xs font-medium text-[#9fe8c9]/90">
+                  <label htmlFor="register-email" className="mb-1.5 block text-xs font-medium text-slate-600">
                     Email
                   </label>
                   <input
@@ -284,7 +296,7 @@ export default function LoginOverlay() {
                 </div>
 
                 <div>
-                  <label htmlFor="register-password" className="mb-1.5 block text-xs font-medium text-[#9fe8c9]/90">
+                  <label htmlFor="register-password" className="mb-1.5 block text-xs font-medium text-slate-600">
                     Password
                   </label>
                   <input
@@ -302,7 +314,7 @@ export default function LoginOverlay() {
                 <div>
                   <label
                     htmlFor="register-confirm"
-                    className="mb-1.5 block text-xs font-medium text-[#9fe8c9]/90"
+                    className="mb-1.5 block text-xs font-medium text-slate-600"
                   >
                     Confirm password
                   </label>
@@ -321,7 +333,7 @@ export default function LoginOverlay() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-6 w-full rounded-xl bg-linear-to-r from-[#00e070] to-[#00b359] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_0_24px_rgba(0,255,136,0.25)] transition-[filter,box-shadow,opacity] hover:brightness-110 hover:shadow-[0_0_32px_rgba(0,255,136,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00ff88]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950/80 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-6 w-full rounded-xl border border-[#00cc6a]/30 bg-linear-to-r from-[#00e070] to-[#00b359] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(0,204,106,0.28)] transition-[filter,box-shadow,opacity] hover:brightness-110 hover:shadow-[0_10px_36px_rgba(0,204,106,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00ff88]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -345,8 +357,8 @@ export default function LoginOverlay() {
                     exit={{ opacity: 0, height: 0, marginTop: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="flex items-start gap-2 rounded-xl border border-red-400/35 bg-red-500/15 px-3 py-2.5 text-sm text-red-100 backdrop-blur-sm">
-                      <i className="fas fa-exclamation-circle mt-0.5 shrink-0 text-red-300" aria-hidden />
+                    <div className="flex items-start gap-2 rounded-xl border border-rose-200/90 bg-rose-50/80 px-3 py-2.5 text-sm text-rose-900 backdrop-blur-md">
+                      <i className="fas fa-exclamation-circle mt-0.5 shrink-0 text-rose-500" aria-hidden />
                       <span>{error}</span>
                     </div>
                   </motion.div>
@@ -355,7 +367,7 @@ export default function LoginOverlay() {
             </div>
           </div>
 
-          <p className="mt-6 text-center text-sm text-white/50">
+          <p className="mt-6 text-center text-sm text-slate-600">
             {isLoginMode ? "Don't have an account?" : 'Already have an account?'}{' '}
             <button
               type="button"
@@ -364,7 +376,7 @@ export default function LoginOverlay() {
                 setError('');
               }}
               disabled={loading}
-              className="font-semibold text-[#7dffb8] transition-colors hover:text-[#a8ffcc] disabled:opacity-50"
+              className="font-semibold text-[#00a855] transition-colors hover:text-[#008f49] disabled:opacity-50"
             >
               {isLoginMode ? 'Create one' : 'Sign in instead'}
             </button>
@@ -372,10 +384,10 @@ export default function LoginOverlay() {
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center" aria-hidden>
-              <div className="w-full border-t border-white/10" />
+              <div className="w-full border-t border-slate-200/80" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1 font-medium text-white/45 backdrop-blur-md">
+              <span className="rounded-full border border-white/90 bg-white/70 px-3 py-1 font-medium text-slate-500 shadow-sm backdrop-blur-md">
                 Or continue with
               </span>
             </div>
@@ -386,7 +398,7 @@ export default function LoginOverlay() {
               type="button"
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-medium text-white/90 shadow-sm backdrop-blur-md transition-[background-color,border-color,box-shadow] hover:border-white/25 hover:bg-white/15 hover:shadow-[0_0_20px_rgba(255,255,255,0.06)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200/90 bg-white/55 px-4 py-2.5 text-sm font-medium text-slate-800 shadow-sm backdrop-blur-md transition-[background-color,border-color,box-shadow] hover:border-slate-300/90 hover:bg-white/75 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
             >
               <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden>
                 <path
@@ -413,7 +425,7 @@ export default function LoginOverlay() {
               type="button"
               onClick={handleGitHubLogin}
               disabled={loading}
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-black/35 px-4 py-2.5 text-sm font-medium text-white/95 backdrop-blur-md transition-[background-color,border-color,box-shadow] hover:border-white/20 hover:bg-black/45 hover:shadow-[0_0_24px_rgba(0,255,136,0.08)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-700/25 bg-slate-800/85 px-4 py-2.5 text-sm font-medium text-white shadow-md backdrop-blur-md transition-[background-color,border-color,box-shadow] hover:border-slate-600/40 hover:bg-slate-800 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
             >
               <i className="fab fa-github text-lg" aria-hidden />
               {loading ? 'Connecting…' : 'GitHub'}
@@ -421,6 +433,6 @@ export default function LoginOverlay() {
           </div>
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }

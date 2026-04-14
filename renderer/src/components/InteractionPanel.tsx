@@ -454,7 +454,7 @@ export default function InteractionPanel() {
             </div>
           ) : (
             displayGroups.map((group, groupIndex) => (
-              <div key={group.conversation?.id || `orphan-${groupIndex}`} className="space-y-2">
+              <div key={group.conversation?.id || `orphan-${groupIndex}`} className="min-w-0 space-y-2">
                 <div
                   role="button"
                   tabIndex={0}
@@ -465,7 +465,7 @@ export default function InteractionPanel() {
                       toggleConversation(groupIndex);
                     }
                   }}
-                  className="w-full min-w-0 cursor-pointer overflow-hidden rounded-xl border border-[#e5e7eb] bg-white shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-[#00ff88] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00ff88]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f0fffa]"
+                  className="w-full min-w-0 max-w-full cursor-pointer overflow-hidden rounded-xl border border-[#e5e7eb] bg-white shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-[#00ff88] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00ff88]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f0fffa]"
                 >
                   <div className="flex w-full min-w-0 items-center gap-3 border-b border-[#e5e7eb] bg-linear-to-r from-[#f9fafb] to-white p-4">
                     <div className="group/header flex min-w-0 flex-1 items-center gap-3 text-left">
@@ -537,10 +537,9 @@ export default function InteractionPanel() {
                     ) : null}
                   </div>
 
+                  {/* No CSS transition on grid rows — animated 0fr/1fr caused intermittent width/height glitches. */}
                   <div
-                    className={`grid w-full min-w-0 transition-[grid-template-rows] duration-300 ease-in-out motion-reduce:transition-none ${
-                      group.isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                    }`}
+                    className={`grid w-full min-w-0 ${group.isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
                     onClick={e => e.stopPropagation()}
                   >
                     <div className="min-h-0 overflow-hidden" inert={!group.isExpanded}>
