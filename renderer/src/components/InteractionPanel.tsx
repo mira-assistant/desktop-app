@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Interaction, Person, Conversation } from '@/types/models.types';
 import { personsApi } from '@/lib/api/persons';
@@ -16,14 +16,46 @@ interface ConversationGroup {
   isActive: boolean;
 }
 
+/** Matches backend `Conversation.is_active`, with a safe fallback for older payloads. */
+function conversationIsActive(c: Conversation | null): boolean {
+  if (!c) return false;
+  if (typeof c.is_active === 'boolean') return c.is_active;
+  return c.topic_summary === null;
+}
+
+function getEffectiveConversationId(group: ConversationGroup): string | null {
+  if (group.conversation?.id) return group.conversation.id;
+  const cid = group.interactions.find(i => i.conversation_id)?.conversation_id;
+  return cid ?? null;
+}
+
+function isOrphanConversationGroup(group: ConversationGroup): boolean {
+  if (group.conversation) return false;
+  if (group.interactions.length === 0) return true;
+  return group.interactions.every(i => !i.conversation_id);
+}
+
+function findMergeGroupIndex(groups: ConversationGroup[], interaction: Interaction): number {
+  const convId = interaction.conversation_id?.trim() || null;
+  if (convId) {
+    return groups.findIndex(g => getEffectiveConversationId(g) === convId);
+  }
+  return groups.findIndex(g => isOrphanConversationGroup(g));
+}
+
 export default function InteractionPanel() {
   const { isConnected } = useService();
   const containerRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
 
   const [conversationGroups, setConversationGroups] = useState<ConversationGroup[]>([]);
+  const conversationGroupsRef = useRef<ConversationGroup[]>([]);
   const [persons, setPersons] = useState<Map<string, Person>>(new Map());
   const [loading, setLoading] = useState(false);
+
+  useLayoutEffect(() => {
+    conversationGroupsRef.current = conversationGroups;
+  }, [conversationGroups]);
 
   // Delete modals
   const [deleteInteractionModal, setDeleteInteractionModal] = useState<string | null>(null);
@@ -90,7 +122,7 @@ export default function InteractionPanel() {
             });
           } else {
             const conversation = conversationMap.get(conversationId);
-            const isActive = conversation ? conversation.topic_summary === null : false;
+            const isActive = conversationIsActive(conversation ?? null);
 
             groups.push({
               conversation: conversation || null,
@@ -127,80 +159,102 @@ export default function InteractionPanel() {
     const handleNewInteraction = async (payload: any) => {
       const interaction: Interaction = payload.data;
 
-      setConversationGroups(prev => {
-        const existingGroupIndex = prev.findIndex(
-          g => g.conversation?.id === interaction.conversation_id
-        );
-
-        if (existingGroupIndex !== -1) {
-          const updated = [...prev];
-          updated[existingGroupIndex] = {
-            ...updated[existingGroupIndex],
-            interactions: [...updated[existingGroupIndex].interactions, interaction],
-          };
-          return updated;
+      const appendToGroup = (
+        groups: ConversationGroup[],
+        index: number,
+        conv: Conversation | null
+      ): ConversationGroup[] => {
+        const group = groups[index];
+        if (group.interactions.some(i => i.id === interaction.id)) {
+          return groups;
         }
+        const mergedConversation = conv ?? group.conversation;
+        const isActive = conversationIsActive(mergedConversation);
+        const next = [...groups];
+        next[index] = {
+          ...group,
+          conversation: mergedConversation,
+          interactions: [...group.interactions, interaction],
+          isExpanded: isActive ? true : group.isExpanded,
+          isActive,
+        };
+        return next;
+      };
 
-        // Not found - it's a new conversation, will be handled below
-        return prev;
-      });
+      // Use a layout-synced ref so we do not rely on mutating outer vars inside setState
+      // updaters (that can run asynchronously and used to race the "new conversation" path).
+      const snapshot = conversationGroupsRef.current;
+      const mergeIdx = findMergeGroupIndex(snapshot, interaction);
 
-      // Check if this is a new conversation (async operations outside setState)
-      setConversationGroups(prev => {
-        const exists = prev.some(g => g.conversation?.id === interaction.conversation_id);
-        return exists ? prev : prev; // No change if exists
-      });
+      if (mergeIdx !== -1) {
+        setConversationGroups(prev => {
+          const idx = findMergeGroupIndex(prev, interaction);
+          if (idx === -1) return prev;
+          return appendToGroup(prev, idx, null);
+        });
+        return;
+      }
 
-      // If new conversation, fetch metadata and add it
-      const existsInState = conversationGroups.some(
-        g => g.conversation?.id === interaction.conversation_id
+      const convId = interaction.conversation_id?.trim() || null;
+
+      if (!convId) {
+        setConversationGroups(prev => {
+          const idx = findMergeGroupIndex(prev, interaction);
+          if (idx !== -1) {
+            return appendToGroup(prev, idx, null);
+          }
+          const orphanGroup: ConversationGroup = {
+            conversation: null,
+            interactions: [interaction],
+            isExpanded: false,
+            isActive: false,
+          };
+          return [orphanGroup, ...prev];
+        });
+        return;
+      }
+
+      setConversationGroups(prev =>
+        prev.map(group => ({
+          ...group,
+          isActive: false,
+          isExpanded: false,
+        }))
       );
 
-      if (!existsInState && interaction.conversation_id) {
-        // Mark all previous conversations as inactive
-        setConversationGroups(prev =>
-          prev.map(group => ({
-            ...group,
-            isActive: false,
-            isExpanded: false,
-          }))
-        );
+      try {
+        const conversation = await conversationsApi.getById(convId);
 
-        try {
-          // Fetch new conversation metadata
-          const conversation = await conversationsApi.getById(interaction.conversation_id);
-
+        setConversationGroups(prev => {
+          const idx = findMergeGroupIndex(prev, interaction);
+          if (idx !== -1) {
+            return appendToGroup(prev, idx, conversation);
+          }
+          const isActive = conversationIsActive(conversation);
           const newGroup: ConversationGroup = {
             conversation,
             interactions: [interaction],
             isExpanded: true,
-            isActive: conversation.topic_summary === null,
+            isActive,
           };
+          return [newGroup, ...prev];
+        });
+      } catch (error) {
+        console.error('Failed to fetch new conversation:', error);
 
-          setConversationGroups(prev => [newGroup, ...prev]);
-        } catch (error) {
-          console.error('Failed to fetch new conversation:', error);
-
-          // Fallback: add without conversation metadata
+        setConversationGroups(prev => {
+          const idx = findMergeGroupIndex(prev, interaction);
+          if (idx !== -1) {
+            return appendToGroup(prev, idx, null);
+          }
           const newGroup: ConversationGroup = {
             conversation: null,
             interactions: [interaction],
             isExpanded: true,
             isActive: true,
           };
-
-          setConversationGroups(prev => [newGroup, ...prev]);
-        }
-      } else if (!interaction.conversation_id) {
-        // Orphaned interaction (no conversation_id)
-        const orphanGroup: ConversationGroup = {
-          conversation: null,
-          interactions: [interaction],
-          isExpanded: false,
-          isActive: false,
-        };
-
-        setConversationGroups(prev => [orphanGroup, ...prev]);
+          return [newGroup, ...prev];
+        });
       }
     };
 

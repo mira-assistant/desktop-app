@@ -21,8 +21,9 @@ function calculateRMS(audio: Float32Array): number {
 
 function hasSignificantAudio(audio: Float32Array): boolean {
   const rms = calculateRMS(audio);
-  const minRMS = 0.01;
-  const maxRMS = 0.3;
+  const minRMS = 0.008;
+  // Loud speech can legitimately exceed 0.3 RMS without being broken audio; rejecting it was dropping good takes.
+  const maxRMS = 0.55;
 
   if (rms < minRMS) {
     console.log('[VAD] Rejected: Too quiet (RMS:', rms.toFixed(4), ')');
@@ -35,7 +36,8 @@ function hasSignificantAudio(audio: Float32Array): boolean {
   }
 
   const durationSeconds = audio.length / 16000;
-  const minDuration = 0.5;
+  // Align with VAD minSpeechMs: need enough audio for Whisper + speaker embedding (backend prefers ~0.8s+ when possible).
+  const minDuration = 0.42;
   const maxDuration = 10;
 
   if (durationSeconds < minDuration) {
@@ -131,11 +133,13 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     },
 
     model: 'v5',
-    positiveSpeechThreshold: 0.85,
-    negativeSpeechThreshold: 0.6,
-    redemptionMs: 300,
-    minSpeechMs: 200,
-    preSpeechPadMs: 100,
+    // Defaults in @ricky0123/vad-web use ~800ms pre-speech pad and ~1400ms redemption — we were far more
+    // aggressive (100ms / 300ms / 0.85), which trims word onsets and tails and hurts Whisper + speaker ID.
+    positiveSpeechThreshold: 0.5,
+    negativeSpeechThreshold: 0.35,
+    redemptionMs: 1000,
+    minSpeechMs: 500,
+    preSpeechPadMs: 600,
     submitUserSpeechOnPause: false,
   });
 
