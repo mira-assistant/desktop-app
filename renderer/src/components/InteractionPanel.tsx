@@ -11,6 +11,40 @@ import Modal from '@/components/ui/Modal';
 
 const ORPHAN_KEY = '__orphan__';
 
+/**
+ * Parse API datetimes for display and sorting. Strings without a timezone are treated as UTC
+ * (common for SQLAlchemy/FastAPI naive UTC), then `toLocale*` shows the user's local time.
+ */
+function parseInteractionDate(iso: string | undefined | null): Date {
+  if (iso == null || String(iso).trim() === '') {
+    return new Date(NaN);
+  }
+  const s = String(iso).trim();
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?$/.test(s)) {
+    return new Date(`${s}Z`);
+  }
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,9})?$/.test(s)) {
+    return new Date(`${s.replace(' ', 'T')}Z`);
+  }
+  return new Date(s);
+}
+
+function formatLocalTime(iso: string | undefined | null): string {
+  const d = parseInteractionDate(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+function formatLocalDate(iso: string | undefined | null): string {
+  const d = parseInteractionDate(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, { dateStyle: 'medium' });
+}
+
 /** Stable bucket id: conversation row id, else first known interaction conversation_id, else orphan sentinel. */
 function groupKey(g: { conversation: Conversation | null; interactions: Interaction[] }): string {
   if (g.conversation?.id) return g.conversation.id;
@@ -26,7 +60,9 @@ function latestInteraction(groups: { interactions: Interaction[] }[]): Interacti
   const all = groups.flatMap(g => g.interactions);
   if (all.length === 0) return null;
   return all.reduce((a, b) =>
-    new Date(b.timestamp).getTime() > new Date(a.timestamp).getTime() ? b : a
+    parseInteractionDate(b.timestamp).getTime() > parseInteractionDate(a.timestamp).getTime()
+      ? b
+      : a
   );
 }
 
@@ -140,8 +176,10 @@ export default function InteractionPanel() {
         const groups: ConversationGroupState[] = [];
 
         for (const [conversationId, groupInteractions] of interactionGroups.entries()) {
-          const sortedInteractions = groupInteractions.sort((a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          const sortedInteractions = groupInteractions.sort(
+            (a, b) =>
+              parseInteractionDate(a.timestamp).getTime() -
+              parseInteractionDate(b.timestamp).getTime()
           );
 
           if (conversationId === null) {
@@ -161,7 +199,9 @@ export default function InteractionPanel() {
         groups.sort((a, b) => {
           const aTime = a.conversation?.started_at || a.interactions[0]?.timestamp || '';
           const bTime = b.conversation?.started_at || b.interactions[0]?.timestamp || '';
-          return new Date(bTime).getTime() - new Date(aTime).getTime();
+          return (
+            parseInteractionDate(bTime).getTime() - parseInteractionDate(aTime).getTime()
+          );
         });
 
         setConversationGroups(groups);
@@ -449,9 +489,9 @@ export default function InteractionPanel() {
                           {group.interactions.length}
                         </span>
                         <span>
-                          {new Date(
+                          {formatLocalDate(
                             group.conversation?.started_at || group.interactions[0]?.timestamp
-                          ).toLocaleDateString()}
+                          )}
                         </span>
                       </div>
                     </button>
@@ -507,7 +547,7 @@ export default function InteractionPanel() {
                                         {person.label}
                                       </span>
                                       <span className="text-[10px] text-[#9ca3af]">
-                                        {new Date(interaction.timestamp).toLocaleTimeString()}
+                                        {formatLocalTime(interaction.timestamp)}
                                       </span>
                                     </div>
                                     <p className="text-sm text-[#1f2937] leading-relaxed">
