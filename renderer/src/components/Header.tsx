@@ -1,4 +1,3 @@
-'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -179,7 +178,7 @@ export default function Header({ isPeoplePanelOpen, setIsPeoplePanelOpen }: Head
   };
 
   return (
-    <header className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-[#f0fffa] to-[#e6fffa] border-b border-[#80ffdb] shadow-[0_2px_10px_rgba(0,255,136,0.1)]">
+    <header className="flex items-center justify-between px-6 py-4 bg-linear-to-r from-[#f0fffa] to-[#e6fffa] border-b border-[#80ffdb] shadow-[0_2px_10px_rgba(0,255,136,0.1)]">
       {/* Logo */}
       <div className="flex items-center gap-3">
         <h1 className="flex items-center gap-2 text-2xl font-semibold text-[#00cc6a]">

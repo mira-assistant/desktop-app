@@ -1,7 +1,5 @@
-'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Interaction, Person, Conversation } from '@/types/models.types';
 import { personsApi } from '@/lib/api/persons';
 import { interactionsApi } from '@/lib/api/interactions';
@@ -10,11 +8,105 @@ import { useService } from '@/hooks/useService';
 import { useToast } from '@/contexts/ToastContext';
 import Modal from '@/components/ui/Modal';
 
-interface ConversationGroup {
+const ORPHAN_KEY = '__orphan__';
+
+/**
+ * Parse API datetimes for display and sorting. Strings without a timezone are treated as UTC
+ * (common for SQLAlchemy/FastAPI naive UTC), then `toLocale*` shows the user's local time.
+ */
+function parseInteractionDate(iso: string | undefined | null): Date {
+  if (iso == null || String(iso).trim() === '') {
+    return new Date(NaN);
+  }
+  const s = String(iso).trim();
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?$/.test(s)) {
+    return new Date(`${s}Z`);
+  }
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,9})?$/.test(s)) {
+    return new Date(`${s.replace(' ', 'T')}Z`);
+  }
+  return new Date(s);
+}
+
+function formatLocalTime(iso: string | undefined | null): string {
+  const d = parseInteractionDate(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+function formatLocalDate(iso: string | undefined | null): string {
+  const d = parseInteractionDate(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, { dateStyle: 'medium' });
+}
+
+/** Stable bucket id: conversation row id, else first known interaction conversation_id, else orphan sentinel. */
+function groupKey(g: { conversation: Conversation | null; interactions: Interaction[] }): string {
+  if (g.conversation?.id) return g.conversation.id;
+  const cid = g.interactions.find(i => i.conversation_id?.trim())?.conversation_id?.trim();
+  return cid || ORPHAN_KEY;
+}
+
+function interactionKey(i: Interaction): string {
+  return i.conversation_id?.trim() || ORPHAN_KEY;
+}
+
+function latestInteraction(groups: { interactions: Interaction[] }[]): Interaction | null {
+  const all = groups.flatMap(g => g.interactions);
+  if (all.length === 0) return null;
+  return all.reduce((a, b) =>
+    parseInteractionDate(b.timestamp).getTime() > parseInteractionDate(a.timestamp).getTime()
+      ? b
+      : a
+  );
+}
+
+function activeConversationKey(groups: { interactions: Interaction[] }[]): string {
+  const latest = latestInteraction(groups);
+  return latest ? interactionKey(latest) : ORPHAN_KEY;
+}
+
+function findGroupIndex(
+  groups: { conversation: Conversation | null; interactions: Interaction[] }[],
+  interaction: Interaction
+): number {
+  const key = interactionKey(interaction);
+  return groups.findIndex(g => groupKey(g) === key);
+}
+
+function appendDedupe(
+  groups: ConversationGroupState[],
+  index: number,
+  interaction: Interaction,
+  conversation: Conversation | null
+): ConversationGroupState[] {
+  const group = groups[index];
+  if (group.interactions.some(i => i.id === interaction.id)) {
+    return groups;
+  }
+  const next = [...groups];
+  next[index] = {
+    ...group,
+    conversation: conversation ?? group.conversation,
+    interactions: [...group.interactions, interaction],
+  };
+  return next;
+}
+
+interface ConversationGroupState {
   conversation: Conversation | null;
   interactions: Interaction[];
-  isExpanded: boolean;
+  /** When set, user has toggled expand/collapse; otherwise UI derives from active conversation */
+  isExpanded?: boolean;
+}
+
+interface ConversationGroupView extends ConversationGroupState {
   isActive: boolean;
+  isExpanded: boolean;
 }
 
 export default function InteractionPanel() {
@@ -22,9 +114,19 @@ export default function InteractionPanel() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
 
-  const [conversationGroups, setConversationGroups] = useState<ConversationGroup[]>([]);
+  const [conversationGroups, setConversationGroups] = useState<ConversationGroupState[]>([]);
   const [persons, setPersons] = useState<Map<string, Person>>(new Map());
   const [loading, setLoading] = useState(false);
+
+  const displayGroups: ConversationGroupView[] = useMemo(() => {
+    const activeKey = activeConversationKey(conversationGroups);
+    return conversationGroups.map(g => {
+      const gkey = groupKey(g);
+      const isActive = gkey === activeKey;
+      const isExpanded = g.isExpanded !== undefined ? g.isExpanded : isActive;
+      return { ...g, isActive, isExpanded };
+    });
+  }, [conversationGroups]);
 
   // Delete modals
   const [deleteInteractionModal, setDeleteInteractionModal] = useState<string | null>(null);
@@ -44,10 +146,8 @@ export default function InteractionPanel() {
     const loadData = async () => {
       setLoading(true);
       try {
-        // 1. Fetch all interactions
         const interactions = await interactionsApi.getAll();
 
-        // 2. Group by conversation_id
         const conversationIds = new Set<string>();
         const interactionGroups = new Map<string | null, Interaction[]>();
 
@@ -59,7 +159,6 @@ export default function InteractionPanel() {
           interactionGroups.set(convId, [...existing, interaction]);
         });
 
-        // 3. Fetch conversation metadata for unique IDs
         const conversationMap = new Map<string, Conversation>();
         if (conversationIds.size > 0) {
           const conversations = await Promise.all(
@@ -73,40 +172,35 @@ export default function InteractionPanel() {
           });
         }
 
-        // 4. Amalgamate into ConversationGroup objects
-        const groups: ConversationGroup[] = [];
+        const groups: ConversationGroupState[] = [];
 
         for (const [conversationId, groupInteractions] of interactionGroups.entries()) {
-          const sortedInteractions = groupInteractions.sort((a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          const sortedInteractions = groupInteractions.sort(
+            (a, b) =>
+              parseInteractionDate(a.timestamp).getTime() -
+              parseInteractionDate(b.timestamp).getTime()
           );
 
           if (conversationId === null) {
-            // Orphaned interactions
             groups.push({
               conversation: null,
               interactions: sortedInteractions,
-              isExpanded: false,
-              isActive: false,
             });
           } else {
-            const conversation = conversationMap.get(conversationId);
-            const isActive = conversation ? conversation.topic_summary === null : false;
-
+            const conversation = conversationMap.get(conversationId) ?? null;
             groups.push({
-              conversation: conversation || null,
+              conversation,
               interactions: sortedInteractions,
-              isExpanded: isActive, // Auto-expand active conversations
-              isActive,
             });
           }
         }
 
-        // 5. Sort by start time (newest first)
         groups.sort((a, b) => {
           const aTime = a.conversation?.started_at || a.interactions[0]?.timestamp || '';
           const bTime = b.conversation?.started_at || b.interactions[0]?.timestamp || '';
-          return new Date(bTime).getTime() - new Date(aTime).getTime();
+          return (
+            parseInteractionDate(bTime).getTime() - parseInteractionDate(aTime).getTime()
+          );
         });
 
         setConversationGroups(groups);
@@ -128,86 +222,71 @@ export default function InteractionPanel() {
     const handleNewInteraction = async (payload: any) => {
       const interaction: Interaction = payload.data;
 
+      let handledSync = false;
       setConversationGroups(prev => {
-        const existingGroupIndex = prev.findIndex(
-          g => g.conversation?.id === interaction.conversation_id
-        );
-
-        if (existingGroupIndex !== -1) {
-          const updated = [...prev];
-          updated[existingGroupIndex] = {
-            ...updated[existingGroupIndex],
-            interactions: [...updated[existingGroupIndex].interactions, interaction],
-          };
-          return updated;
+        const idx = findGroupIndex(prev, interaction);
+        if (idx !== -1) {
+          handledSync = true;
+          return appendDedupe(prev, idx, interaction, null);
         }
-
-        // Not found - it's a new conversation, will be handled below
+        if (!interaction.conversation_id?.trim()) {
+          handledSync = true;
+          const orphanIdx = prev.findIndex(g => groupKey(g) === ORPHAN_KEY);
+          if (orphanIdx !== -1) {
+            return appendDedupe(prev, orphanIdx, interaction, null);
+          }
+          return [
+            {
+              conversation: null,
+              interactions: [interaction],
+            },
+            ...prev,
+          ];
+        }
         return prev;
       });
 
-      // Check if this is a new conversation (async operations outside setState)
-      setConversationGroups(prev => {
-        const exists = prev.some(g => g.conversation?.id === interaction.conversation_id);
-        return exists ? prev : prev; // No change if exists
-      });
+      if (handledSync) {
+        return;
+      }
 
-      // If new conversation, fetch metadata and add it
-      const existsInState = conversationGroups.some(
-        g => g.conversation?.id === interaction.conversation_id
-      );
+      const convId = interaction.conversation_id.trim();
 
-      if (!existsInState && interaction.conversation_id) {
-        // Mark all previous conversations as inactive
-        setConversationGroups(prev =>
-          prev.map(group => ({
-            ...group,
-            isActive: false,
-            isExpanded: false,
-          }))
-        );
+      try {
+        const conversation = await conversationsApi.getById(convId);
 
-        try {
-          // Fetch new conversation metadata
-          const conversation = await conversationsApi.getById(interaction.conversation_id);
-
-          const newGroup: ConversationGroup = {
+        setConversationGroups(prev => {
+          const idx = findGroupIndex(prev, interaction);
+          if (idx !== -1) {
+            return appendDedupe(prev, idx, interaction, conversation);
+          }
+          const nextGroup: ConversationGroupState = {
             conversation,
             interactions: [interaction],
-            isExpanded: true,
-            isActive: conversation.topic_summary === null,
           };
+          return [nextGroup, ...prev];
+        });
+      } catch (error) {
+        console.error('Failed to fetch new conversation:', error);
 
-          setConversationGroups(prev => [newGroup, ...prev]);
-        } catch (error) {
-          console.error('Failed to fetch new conversation:', error);
-
-          // Fallback: add without conversation metadata
-          const newGroup: ConversationGroup = {
-            conversation: null,
-            interactions: [interaction],
-            isExpanded: true,
-            isActive: true,
-          };
-
-          setConversationGroups(prev => [newGroup, ...prev]);
-        }
-      } else if (!interaction.conversation_id) {
-        // Orphaned interaction (no conversation_id)
-        const orphanGroup: ConversationGroup = {
-          conversation: null,
-          interactions: [interaction],
-          isExpanded: false,
-          isActive: false,
-        };
-
-        setConversationGroups(prev => [orphanGroup, ...prev]);
+        setConversationGroups(prev => {
+          const idx = findGroupIndex(prev, interaction);
+          if (idx !== -1) {
+            return appendDedupe(prev, idx, interaction, null);
+          }
+          return [
+            {
+              conversation: null,
+              interactions: [interaction],
+            },
+            ...prev,
+          ];
+        });
       }
     };
 
     const cleanup = window.electronAPI.onNewInteraction(handleNewInteraction);
 
-    // Cleanup function to remove listener
     return () => {
       if (cleanup) cleanup();
     };
@@ -254,11 +333,15 @@ export default function InteractionPanel() {
   }, [conversationGroups]);
 
   const toggleConversation = (index: number) => {
-    setConversationGroups(prev =>
-      prev.map((group, i) =>
-        i === index ? { ...group, isExpanded: !group.isExpanded } : group
-      )
-    );
+    setConversationGroups(prev => {
+      const activeKey = activeConversationKey(prev);
+      return prev.map((g, i) => {
+        if (i !== index) return g;
+        const derived =
+          g.isExpanded !== undefined ? g.isExpanded : groupKey(g) === activeKey;
+        return { ...g, isExpanded: !derived };
+      });
+    });
   };
 
   const handleDeleteInteraction = async (interactionId: string) => {
@@ -266,10 +349,12 @@ export default function InteractionPanel() {
       await interactionsApi.delete(interactionId);
 
       setConversationGroups(prev =>
-        prev.map(group => ({
-          ...group,
-          interactions: group.interactions.filter(i => i.id !== interactionId)
-        })).filter(group => group.interactions.length > 0)
+        prev
+          .map(group => ({
+            ...group,
+            interactions: group.interactions.filter(i => i.id !== interactionId),
+          }))
+          .filter(group => group.interactions.length > 0)
       );
 
       showToast('Interaction deleted', 'success');
@@ -281,15 +366,14 @@ export default function InteractionPanel() {
 
   const handleDeleteConversation = async (conversationId: string) => {
     try {
-      const group = conversationGroups.find(g => g.conversation?.id === conversationId);
+      const group = conversationGroups.find(
+        g => g.conversation?.id === conversationId || groupKey(g) === conversationId
+      );
       if (!group) return;
 
-      // Delete all interactions in conversation
       await Promise.all(group.interactions.map(i => interactionsApi.delete(i.id)));
 
-      setConversationGroups(prev =>
-        prev.filter(g => g.conversation?.id !== conversationId)
-      );
+      setConversationGroups(prev => prev.filter(g => groupKey(g) !== conversationId));
 
       showToast('Conversation deleted', 'success');
     } catch (error) {
@@ -298,7 +382,7 @@ export default function InteractionPanel() {
     }
   };
 
-  const getConversationTitle = (group: ConversationGroup): string => {
+  const getConversationTitle = (group: ConversationGroupView): string => {
     if (group.isActive) return 'Active Conversation';
     if (group.conversation?.topic_summary) return group.conversation.topic_summary;
     if (!group.conversation && group.interactions.length > 0) return 'Untitled Conversation';
@@ -307,13 +391,15 @@ export default function InteractionPanel() {
 
   const handleClearAll = async () => {
     try {
-      await Promise.all(conversationGroups.map(async (group) => {
-        if (group.conversation) {
-          await conversationsApi.delete(group.conversation.id);
-        } else {
-          await Promise.all(group.interactions.map((interaction) => interactionsApi.delete(interaction.id)));
-        }
-      }));
+      await Promise.all(
+        conversationGroups.map(async group => {
+          if (group.conversation) {
+            await conversationsApi.delete(group.conversation.id);
+          } else {
+            await Promise.all(group.interactions.map(interaction => interactionsApi.delete(interaction.id)));
+          }
+        })
+      );
       const allInteractions = conversationGroups.flatMap(g => g.interactions);
       await Promise.all(allInteractions.map(i => interactionsApi.delete(i.id)));
       setConversationGroups([]);
@@ -338,9 +424,9 @@ export default function InteractionPanel() {
 
   return (
     <>
-      <div className="flex flex-col h-full bg-gradient-to-br from-white to-[#f0fffa] rounded-none overflow-hidden border-l border-[#80ffdb]">
+      <div className="flex flex-col h-full bg-linear-to-br from-white to-[#f0fffa] rounded-none overflow-hidden border-l border-[#80ffdb]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-6 border-b border-[#80ffdb] bg-gradient-to-r from-[#f0fffa] to-white">
+        <div className="flex items-center justify-between px-6 py-6 border-b border-[#80ffdb] bg-linear-to-r from-[#f0fffa] to-white">
           <h2 className="text-xl font-semibold text-[#1f2937]">Interactions</h2>
           <button
             onClick={handleClearAll}
@@ -358,7 +444,7 @@ export default function InteractionPanel() {
             <div className="flex items-center justify-center h-full">
               <i className="fas fa-spinner fa-spin text-3xl text-[#00cc6a]" />
             </div>
-          ) : conversationGroups.length === 0 ? (
+          ) : displayGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <i className="fas fa-robot text-5xl text-[#9ca3af] opacity-50 mb-4" />
               <p className="text-lg font-medium text-[#9ca3af] mb-2">No conversations yet</p>
@@ -367,123 +453,149 @@ export default function InteractionPanel() {
               </small>
             </div>
           ) : (
-            conversationGroups.map((group, groupIndex) => (
-              <div key={group.conversation?.id || `orphan-${groupIndex}`} className="space-y-2">
-                {/* Conversation Card */}
-                <div className="bg-white rounded-xl border border-[#e5e7eb] overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                  {/* Conversation Header */}
-                  <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-[#f9fafb] to-white border-b border-[#e5e7eb]">
-                    <button
-                      onClick={() => toggleConversation(groupIndex)}
-                      className="flex items-center gap-3 flex-1 text-left group"
-                    >
-                      <i
-                        className={`fas fa-chevron-${group.isExpanded ? 'down' : 'right'} text-sm text-[#6b7280] transition-transform group-hover:text-[#00cc6a]`}
-                      />
+            displayGroups.map((group, groupIndex) => (
+              <div key={group.conversation?.id || `orphan-${groupIndex}`} className="min-w-0 space-y-2">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleConversation(groupIndex)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleConversation(groupIndex);
+                    }
+                  }}
+                  className="w-full min-w-0 max-w-full cursor-pointer overflow-hidden rounded-xl border border-[#e5e7eb] bg-white shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-[#00ff88] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00ff88]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f0fffa]"
+                >
+                  <div className="flex w-full min-w-0 items-center gap-3 border-b border-[#e5e7eb] bg-linear-to-r from-[#f9fafb] to-white p-4">
+                    <div className="group/header flex min-w-0 flex-1 items-center gap-3 text-left">
+                      <span
+                        className="flex h-5 w-5 shrink-0 items-center justify-center text-[#6b7280] transition-colors group-hover/header:text-[#00cc6a]"
+                        aria-hidden
+                      >
+                        <i
+                          className={`fas fa-chevron-${group.isExpanded ? 'down' : 'right'} text-xs leading-none`}
+                        />
+                      </span>
 
-                      {group.isActive && (
-                        <span className="inline-block w-2 h-2 bg-[#00ff88] rounded-full animate-pulse" />
-                      )}
+                      {group.isActive ? (
+                        <span
+                          className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#00ff88] animate-pulse"
+                          aria-hidden
+                        />
+                      ) : null}
 
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold text-[#1f2937] flex items-center gap-2">
-                          {getConversationTitle(group)}
+                      <div className="min-w-0 flex-1 overflow-hidden py-0.5">
+                        <h3 className="text-sm font-semibold text-[#1f2937]">
+                          <span className="block truncate" title={getConversationTitle(group)}>
+                            {getConversationTitle(group)}
+                          </span>
                         </h3>
-                        {group.conversation?.context_summary && !group.isActive && (
-                          <p className="text-xs text-[#9ca3af] truncate mt-0.5">
+                        {group.isActive && group.conversation?.topic_summary ? (
+                          <p
+                            className="mt-0.5 truncate text-xs text-[#9ca3af]"
+                            title={group.conversation.topic_summary}
+                          >
+                            {group.conversation.topic_summary}
+                          </p>
+                        ) : null}
+                        {group.conversation?.context_summary ? (
+                          <p
+                            className="mt-0.5 truncate text-xs text-[#9ca3af]"
+                            title={group.conversation.context_summary}
+                          >
                             {group.conversation.context_summary}
                           </p>
-                        )}
+                        ) : null}
                       </div>
 
-                      <div className="flex items-center gap-4 text-xs text-[#9ca3af]">
-                        <span className="flex items-center gap-1">
-                          <i className="fas fa-comment" />
+                      <div className="flex shrink-0 flex-col items-end justify-center gap-0.5 text-xs text-[#9ca3af] sm:flex-row sm:items-center sm:gap-4">
+                        <span className="flex items-center gap-1 whitespace-nowrap tabular-nums">
+                          <i className="fas fa-comment text-[11px] opacity-80" aria-hidden />
                           {group.interactions.length}
                         </span>
-                        <span>
-                          {new Date(
+                        <span className="whitespace-nowrap">
+                          {formatLocalDate(
                             group.conversation?.started_at || group.interactions[0]?.timestamp
-                          ).toLocaleDateString()}
+                          )}
                         </span>
                       </div>
-                    </button>
+                    </div>
 
-                    {/* Delete Conversation Button */}
-                    {group.conversation && (
+                    {group.conversation ? (
                       <button
-                        onClick={() => setDeleteConversationModal(group.conversation!.id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation();
+                          setDeleteConversationModal(group.conversation!.id);
+                        }}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-lg text-red-400 transition-colors hover:bg-red-50 hover:text-red-600"
                         title="Delete conversation"
                       >
-                        <i className="fas fa-trash text-xs" />
+                        <i className="fas fa-trash text-xs" aria-hidden />
                       </button>
-                    )}
+                    ) : null}
                   </div>
 
-                  {/* Interactions (Expanded) */}
-                  <AnimatePresence>
-                    {group.isExpanded && (
-                      <motion.div
-                        initial={{ height: 0 }}
-                        animate={{ height: 'auto' }}
-                        exit={{ height: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="p-4 space-y-2 bg-[#fafbfc]">
-                          {group.interactions.map((interaction) => {
-                            const person = getPersonDisplay(interaction.person_id);
-                            const colors = getPersonColor(person.index);
+                  {/* No CSS transition on grid rows — animated 0fr/1fr caused intermittent width/height glitches. */}
+                  <div
+                    className={`grid w-full min-w-0 ${group.isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div className="min-h-0 overflow-hidden" inert={!group.isExpanded}>
+                      <div className="w-full min-w-0 space-y-2 bg-[#fafbfc] p-4">
+                        {group.interactions.map(interaction => {
+                          const person = getPersonDisplay(interaction.person_id);
+                          const colors = getPersonColor(person.index);
 
-                            return (
-                              <div
-                                key={interaction.id}
-                                className="group/interaction bg-white rounded-lg border border-[#e5e7eb] overflow-hidden hover:border-[#80ffdb] transition-all"
-                              >
-                                <div className="flex items-start gap-3 p-3">
-                                  {/* Avatar */}
-                                  <div
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                                    style={{ backgroundColor: colors.border }}
-                                  >
-                                    {person.label[0].toUpperCase()}
-                                  </div>
-
-                                  {/* Content */}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span
-                                        className="text-xs font-semibold"
-                                        style={{ color: colors.text }}
-                                      >
-                                        {person.label}
-                                      </span>
-                                      <span className="text-[10px] text-[#9ca3af]">
-                                        {new Date(interaction.timestamp).toLocaleTimeString()}
-                                      </span>
-                                    </div>
-                                    <p className="text-sm text-[#1f2937] leading-relaxed">
-                                      {interaction.text}
-                                    </p>
-                                  </div>
-
-                                  {/* Delete Button */}
-                                  <button
-                                    onClick={() => setDeleteInteractionModal(interaction.id)}
-                                    className="w-7 h-7 flex items-center justify-center rounded-md opacity-0 group-hover/interaction:opacity-100 hover:bg-red-50 text-red-400 hover:text-red-600 transition-all flex-shrink-0"
-                                    title="Delete interaction"
-                                  >
-                                    <i className="fas fa-trash text-xs" />
-                                  </button>
+                          return (
+                            <div
+                              key={interaction.id}
+                              className="group/interaction overflow-hidden rounded-lg border border-[#e5e7eb] bg-white transition-[border-color,box-shadow] duration-200 hover:border-[#80ffdb] hover:shadow-sm"
+                            >
+                              <div className="flex items-center gap-3 p-3">
+                                <div
+                                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                                  style={{ backgroundColor: colors.border }}
+                                >
+                                  {person.label[0].toUpperCase()}
                                 </div>
+
+                                <div className="min-w-0 flex-1 self-center py-0.5">
+                                  <div className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                    <span
+                                      className="text-xs font-semibold"
+                                      style={{ color: colors.text }}
+                                    >
+                                      {person.label}
+                                    </span>
+                                    <span className="text-[10px] tabular-nums text-[#9ca3af]">
+                                      {formatLocalTime(interaction.timestamp)}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm leading-relaxed text-[#1f2937]">
+                                    {interaction.text}
+                                  </p>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    setDeleteInteractionModal(interaction.id);
+                                  }}
+                                  className="flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-md text-red-400 opacity-0 transition-[opacity,background-color,color] duration-200 group-hover/interaction:opacity-100 hover:bg-red-50 hover:text-red-600"
+                                  title="Delete interaction"
+                                >
+                                  <i className="fas fa-trash text-xs" aria-hidden />
+                                </button>
                               </div>
-                            );
-                          })}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))

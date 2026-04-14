@@ -32,6 +32,8 @@ export function startWebhookServer(port: number, mainWindow: BrowserWindow): str
 
     if (event === 'service_status') {
       mainWindow.webContents.send('service-status-changed', req.body);
+    } else if (event === 'action') {
+      mainWindow.webContents.send('webhook-action', req.body);
     } else {
       mainWindow.webContents.send('new-interaction', req.body);
     }

@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mira desktop app
 
-## Getting Started
+Electron shell with a **Vite + React** renderer and a TypeScript main process.
 
-First, run the development server:
+## Development
+
+From this directory, with a `.env` at the project root (`desktop-app/.env`) defining at least `API_URL` (and optionally `BETA`):
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This runs the Vite dev server on **http://localhost:5173**, recompiles the main process on change, and launches Electron against that URL.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **`npm run build`** — Compiles the UI (`renderer/dist/`) and main process (`dist/main/`). Does not open a window.
+- **`npm start`** — Runs Electron in production mode against the **last** `npm run build` output. Run `build` first (or use `package`, which runs `build` for you).
 
-## Learn More
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+**`npm run package`** — Same as a fresh `build`, then creates installers via `electron-builder`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**`npm run clean`** — Deletes `dist/`, `renderer/dist/`, and `release/` when you want a full wipe (optional; `build` already clears `dist` and `renderer/dist` before compiling).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment
 
-## Deploy on Vercel
+The same `.env` keys are used as before:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `API_URL` — backend base URL (no `/api/v1` suffix; that is added in code).
+- `BETA` — set to `true` to use `/api/v2` instead of `/api/v1`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The main process loads `.env` via `main/env.ts`. The renderer gets `API_URL` and `BETA` inlined at build time via Vite `define` (and `loadEnv` in dev).

@@ -1,4 +1,3 @@
-'use client';
 
 import { useContext } from 'react';
 import { ServiceContext } from '@/contexts/ServiceContext';

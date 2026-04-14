@@ -1,3 +1,4 @@
+import './env';
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { api } from '../shared/api/client';
@@ -36,10 +37,9 @@ function createWindow() {
 
   // Load application
   if (isDev) {
-    mainWindow.loadURL('http://localhost:3000');
+    mainWindow.loadURL('http://localhost:5173');
   } else {
-    // In prod, jump out of 'dist/main' to find 'renderer/out'
-    mainWindow.loadFile(path.join(__dirname, '../../renderer/out/index.html'));
+    mainWindow.loadFile(path.join(__dirname, '../../renderer/dist/index.html'));
   }
 
   mainWindow.on('closed', () => {

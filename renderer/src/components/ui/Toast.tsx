@@ -1,6 +1,4 @@
-'use client';
-
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ToastType } from '@/types/models.types';
 import { cn } from '@/lib/cn';
 
@@ -14,6 +12,11 @@ interface ToastProps {
 export default function Toast({ message, type, onClose, autoDismiss = true }: ToastProps) {
   const [isVisible, setIsVisible] = useState(false);
 
+  const handleClose = useCallback(() => {
+    setIsVisible(false);
+    setTimeout(onClose, 300);
+  }, [onClose]);
+
   useEffect(() => {
     // Trigger animation
     setTimeout(() => setIsVisible(true), 10);
@@ -26,12 +29,7 @@ export default function Toast({ message, type, onClose, autoDismiss = true }: To
 
       return () => clearTimeout(timer);
     }
-  }, [message, type, autoDismiss]);
-
-  const handleClose = () => {
-    setIsVisible(false);
-    setTimeout(onClose, 300);
-  };
+  }, [message, type, autoDismiss, handleClose]);
 
   const bgColors = {
     info: 'bg-green-600',
