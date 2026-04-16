@@ -43,6 +43,7 @@ jobs:
       - name: Write .env.production for packaged app
         env:
           MIRA_API_URL: ${{ secrets.MIRA_API_URL }}
+        shell: bash
         run: |
           if [ -z "$MIRA_API_URL" ]; then
             echo "Missing organization secret MIRA_API_URL (or this repo cannot read it)"
