@@ -1,6 +1,8 @@
 {
   "appId": "com.mira.app",
-  "productName": "Mira App",
+  "productName": "Mira Assistant",
+  "copyright": "Copyright © 2026 Ankur Desai",
+  "artifactName": "Mira-Assistant-${version}-${os}-${arch}.${ext}",
   "files": [
     "dist/**/*",
     "renderer/dist/**/*",

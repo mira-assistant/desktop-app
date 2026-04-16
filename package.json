@@ -1,6 +1,11 @@
 {
   "name": "mira-app",
-  "version": "1.0.3",
+  "version": "1.1.0",
+  "author": {
+    "name": "Ankur Desai",
+    "email": "ardusa05@gmail.com",
+    "url": "https://ardusa.dev/"
+  },
   "main": "dist/main/background.js",
   "scripts": {
     "dev": "concurrently -n \"VITE,MAIN,ELEC\" -c \"magenta,blue,green\" \"vite --config renderer/vite.config.ts\" \"tsc -p main/tsconfig.json --watch\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",

@@ -1,7 +1,11 @@
 import './env';
 import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import path from 'path';
-import { assertBackendMajorCompatible, configureSilentAutoUpdates } from './updater';
+import {
+  assertBackendMajorCompatible,
+  configureSilentAutoUpdates,
+  isUpdateInstallInProgress,
+} from './updater';
 import { api } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/constants';
 import { TokenStorage } from './auth/token-storage';
@@ -17,10 +21,11 @@ function createWindow() {
     width: 1500,
     height: 800,
     autoHideMenuBar: true,
-    titleBarStyle: 'hidden',
-    ...(process.platform !== 'darwin'
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    ...(process.platform === 'win32'
       ? {
-          titleBarOverlay: false,
+          // Keep native window controls visible while using a hidden title bar.
+          titleBarOverlay: true,
         }
       : {}),
     webPreferences: {
@@ -179,6 +184,10 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', async (event) => {
+  if (isUpdateInstallInProgress()) {
+    return;
+  }
+
   event.preventDefault();
 
   const forceQuitTimeout = setTimeout(() => {

@@ -72,6 +72,11 @@ export async function assertBackendMajorCompatible(): Promise<boolean> {
 }
 
 let autoUpdaterConfigured = false;
+let installInProgress = false;
+
+export function isUpdateInstallInProgress(): boolean {
+  return installInProgress;
+}
 
 /**
  * GitHub Releases feed is baked in at package time (electron-builder publish).
@@ -85,6 +90,9 @@ export function configureSilentAutoUpdates(): void {
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on('before-quit-for-update', () => {
+    installInProgress = true;
+  });
 
   autoUpdater.on('error', (err) => {
     console.warn('[updater]', err);
@@ -103,6 +111,7 @@ export function configureSilentAutoUpdates(): void {
       })
       .then(({ response }) => {
         if (response === 0) {
+          installInProgress = true;
           setImmediate(() => autoUpdater.quitAndInstall());
         }
       });
