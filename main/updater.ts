@@ -90,7 +90,7 @@ export function configureSilentAutoUpdates(): void {
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
-  autoUpdater.on('before-quit-for-update', () => {
+  app.on('before-quit-for-update', () => {
     installInProgress = true;
   });
 
