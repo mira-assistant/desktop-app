@@ -109,6 +109,13 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated || !isConnected) return;
 
+    const sendCloseDeregister = () => {
+      if (!isRegisteredRef.current) return;
+      if (window.electronAPI) {
+        window.electronAPI.deregisterClient();
+      }
+    };
+
     const deregisterClient = async () => {
       if (!isRegisteredRef.current) return;
 
@@ -123,16 +130,15 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    const handleBeforeUnload = () => {
-      if (isRegisteredRef.current && window.electronAPI) {
-        window.electronAPI.deregisterClient();
-      }
-    };
+    const handleBeforeUnload = () => sendCloseDeregister();
+    const handlePageHide = () => sendCloseDeregister();
 
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
       deregisterClient();
     };
   }, [clientName, isAuthenticated, isConnected]);
