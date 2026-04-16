@@ -23,7 +23,6 @@ export default function Header({ isPeoplePanelOpen, setIsPeoplePanelOpen }: Head
   const [isChecking, setIsChecking] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
-  const isMac = navigator.platform.toUpperCase().includes('MAC');
   const dragRegionStyle: CSSProperties = { WebkitAppRegion: 'drag' };
   const noDragRegionStyle: CSSProperties = { WebkitAppRegion: 'no-drag' };
 
@@ -196,8 +195,7 @@ export default function Header({ isPeoplePanelOpen, setIsPeoplePanelOpen }: Head
   return (
     <header
       className={cn(
-        'flex items-center justify-between px-6 py-4 bg-linear-to-r from-[#f0fffa] to-[#e6fffa] border-b border-[#80ffdb] shadow-[0_2px_10px_rgba(0,255,136,0.1)]',
-        isMac && 'pt-10'
+        'flex items-center justify-between px-6 py-4 bg-linear-to-r from-[#f0fffa] to-[#e6fffa] border-b border-[#80ffdb] shadow-[0_2px_10px_rgba(0,255,136,0.1)] pt-10',
       )}
       style={dragRegionStyle}
     >
