@@ -1,6 +1,6 @@
 {
   "name": "mira-app",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "dist/main/background.js",
   "scripts": {
     "dev": "concurrently -n \"VITE,MAIN,ELEC\" -c \"magenta,blue,green\" \"vite --config renderer/vite.config.ts\" \"tsc -p main/tsconfig.json --watch\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
