@@ -3,8 +3,9 @@
   "productName": "Mira App",
   "files": [
     "dist/**/*",
-    "renderer/out/**/*",
-    "package.json"
+    "renderer/dist/**/*",
+    "package.json",
+    ".env.production"
   ],
   "directories": {
     "buildResources": "resources",

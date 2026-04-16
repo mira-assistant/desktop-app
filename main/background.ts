@@ -5,21 +5,13 @@ import { assertBackendMajorCompatible, configureSilentAutoUpdates } from './upda
 import { api } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/constants';
 import { TokenStorage } from './auth/token-storage';
-import { startWebhookServer, stopWebhookServer } from './webhook-server';
 import { handleGoogleOAuth, handleGitHubOAuth } from './auth/oauth-handler';
 
-// Configuration
-const WEBHOOK_PORT = 4280;
 const isDev = process.env.NODE_ENV === 'development';
 
-// State
 let mainWindow: BrowserWindow | null = null;
-let webhookUrl: string;
 let currentClientName: string | null = null;
 
-/**
- * Create main application window
- */
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1500,
@@ -27,16 +19,10 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      // Ensure path is relative to the compiled 'dist' structure
       preload: path.join(__dirname, 'preload.js'),
     },
   });
 
-  // Start webhook server
-  webhookUrl = startWebhookServer(WEBHOOK_PORT, mainWindow);
-  console.log(`Webhook server started: ${webhookUrl}`);
-
-  // Load application
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
   } else {
@@ -48,9 +34,6 @@ function createWindow() {
   });
 }
 
-/**
- * Deregister client from backend before quitting
- */
 async function deregisterClient(): Promise<void> {
   if (!currentClientName) {
     console.log('No client to deregister');
@@ -63,34 +46,15 @@ async function deregisterClient(): Promise<void> {
 
     console.log(`Deregistering client: ${currentClientName}`);
 
-    // Use shared API client
-    // Note: We still manually attach the header because the Main process
-    // uses TokenStorage (Keytar), not localStorage.
     await api.delete(ENDPOINTS.SERVICE_CLIENTS + `/${encodeURIComponent(currentClientName)}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
       timeout: 5000,
     });
-
   } catch (error: any) {
     console.error('Failed to deregister client:', error.message);
   }
 }
 
-// ============================================================================
-// IPC Handlers
-// ============================================================================
-
-/**
- * Get webhook URL
- */
-ipcMain.handle('get-webhook-url', () => {
-  console.log(`[IPC] Webhook URL requested: ${webhookUrl}`);
-  return webhookUrl;
-});
-
-/**
- * Token storage handlers
- */
 ipcMain.handle('auth:store-tokens', async (_, accessToken: string, refreshToken: string) => {
   try {
     await TokenStorage.storeTokens(accessToken, refreshToken);
@@ -131,9 +95,6 @@ ipcMain.handle('auth:has-tokens', async () => {
   }
 });
 
-/**
- * OAuth handlers
- */
 ipcMain.handle('auth:google-oauth', async () => {
   try {
     const result = await handleGoogleOAuth();
@@ -154,9 +115,6 @@ ipcMain.handle('auth:github-oauth', async () => {
   }
 });
 
-/**
- * Client name handlers
- */
 ipcMain.handle('client:store-name', async (_, clientName: string) => {
   try {
     await TokenStorage.storeClientName(clientName);
@@ -182,13 +140,9 @@ ipcMain.handle('client:get-name', async () => {
   }
 });
 
-ipcMain.handle('client:deregister', async (__dirname, clientName: string) => {
+ipcMain.handle('client:deregister', async () => {
   await deregisterClient();
 });
-
-// ============================================================================
-// App Lifecycle
-// ============================================================================
 
 app.whenReady().then(async () => {
   const backendOk = await assertBackendMajorCompatible();
@@ -216,16 +170,13 @@ app.on('window-all-closed', () => {
 app.on('before-quit', async (event) => {
   event.preventDefault();
 
-  // 1. Set a safety timeout to force quit if cleanup hangs
   const forceQuitTimeout = setTimeout(() => {
     console.warn('Cleanup timed out, forcing exit...');
     app.exit(0);
-  }, 4000); // 4 seconds
+  }, 4000);
 
   try {
-    // 2. Attempt cleanup
     await deregisterClient();
-    stopWebhookServer();
 
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('app-closing');
@@ -233,7 +184,6 @@ app.on('before-quit', async (event) => {
   } catch (e) {
     console.error('Error during cleanup:', e);
   } finally {
-    // 3. Clear timeout and exit normally
     clearTimeout(forceQuitTimeout);
     console.log('Cleanup complete, quitting.');
     app.exit(0);

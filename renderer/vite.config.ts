@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
   const rootDir = path.resolve(__dirname, '..');
   const env = loadEnv(mode, rootDir, '');
 
-  const apiUrl = env.API_URL || 'http://localhost:8000';
+  const apiUrl = env.MIRA_API_URL || 'http://localhost:8000';
   const beta = env.BETA || '';
 
   return {
@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
     base: './',
     plugins: [react()],
     define: {
-      'process.env.API_URL': JSON.stringify(apiUrl),
+      'process.env.MIRA_API_URL': JSON.stringify(apiUrl),
       'process.env.BETA': JSON.stringify(beta),
     },
     resolve: {

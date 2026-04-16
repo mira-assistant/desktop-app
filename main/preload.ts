@@ -18,8 +18,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onAppClosing: (callback: () => void) =>
     ipcRenderer.on('app-closing', callback),
 
-  getWebhookUrl: () => ipcRenderer.invoke('get-webhook-url'),
-
   onNewInteraction: (callback: (payload: any) => void) => {
     const listener = (_event: any, payload: any) => callback(payload);
     ipcRenderer.on('new-interaction', listener);

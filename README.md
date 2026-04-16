@@ -1,36 +1,20 @@
 # Mira desktop app
 
-Electron shell with a **Vite + React** renderer and a TypeScript main process.
+Electron + Vite/React. Environment keys: **`MIRA_API_URL`**, **`BETA`** only (see [`.env.example`](./.env.example)).
 
 ## Development
 
-From this directory, with a `.env` at the project root (`desktop-app/.env`) defining at least `API_URL` (and optionally `BETA`):
+Create `desktop-app/.env` from `.env.example`, then:
 
 ```bash
+npm install
 npm run dev
 ```
 
-This runs the Vite dev server on **http://localhost:5173**, recompiles the main process on change, and launches Electron against that URL.
+Set `MIRA_API_URL` to a **production** API to exercise Railway + local WebSocket (`wss://`) without any local webhook server.
 
-## Production
+## Packaging (`npm run package`)
 
-- **`npm run build`** — Compiles the UI (`renderer/dist/`) and main process (`dist/main/`). Does not open a window.
-- **`npm start`** — Runs Electron in production mode against the **last** `npm run build` output. Run `build` first (or use `package`, which runs `build` for you).
+CI writes `.env.production` during the release workflow (see [`.github/workflows/release-cd.yml`](./.github/workflows/release-cd.yml)) using the **organization secret** **`MIRA_API_URL`** and `BETA=false`.
 
-```bash
-npm run build
-npm start
-```
-
-**`npm run package`** — Same as a fresh `build`, then creates installers via `electron-builder`.
-
-**`npm run clean`** — Deletes `dist/`, `renderer/dist/`, and `release/` when you want a full wipe (optional; `build` already clears `dist` and `renderer/dist` before compiling).
-
-## Environment
-
-The same `.env` keys are used as before:
-
-- `API_URL` — backend base URL (no `/api/v1` suffix; that is added in code).
-- `BETA` — set to `true` to use `/api/v2` instead of `/api/v1`.
-
-The main process loads `.env` via `main/env.ts`. The renderer gets `API_URL` and `BETA` inlined at build time via Vite `define` (and `loadEnv` in dev).
+If you ever package locally, create a gitignored **`.env.production`** in this directory with `MIRA_API_URL=…` and `BETA=false` before running `npm run package`.
