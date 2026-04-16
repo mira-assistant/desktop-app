@@ -87,6 +87,9 @@ jobs:
           name: Mira App ${{ steps.pkg.outputs.tag }}
           commit: ${{ github.sha }}
           allowUpdates: true
+          # Clear release files first so re-runs / updates never hit
+          # "ReleaseAsset ... already_exists" (replacesArtifacts alone is flaky).
+          removeArtifacts: true
           replacesArtifacts: true
           artifactErrorsFailBuild: true
           omitBodyDuringUpdate: true
