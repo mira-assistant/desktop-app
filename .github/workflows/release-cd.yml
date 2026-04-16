@@ -76,6 +76,11 @@ jobs:
           name: installers-macos
           path: assets/macos
 
+      # electron-builder writes builder-debug.yml on each OS; both match *.yml and
+      # GitHub release assets require unique names — remove before upload.
+      - name: Drop per-OS debug yml (not used by electron-updater)
+        run: find assets -name builder-debug.yml -delete
+
       - uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.pkg.outputs.tag }}
