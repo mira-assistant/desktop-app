@@ -73,9 +73,10 @@ export async function assertBackendMajorCompatible(): Promise<boolean> {
 
 let autoUpdaterConfigured = false;
 let installInProgress = false;
+let updateDownloaded = false;
 
 export function isUpdateInstallInProgress(): boolean {
-  return installInProgress;
+  return installInProgress || updateDownloaded;
 }
 
 /**
@@ -90,15 +91,13 @@ export function configureSilentAutoUpdates(): void {
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
-  app.on('before-quit-for-update', () => {
-    installInProgress = true;
-  });
 
   autoUpdater.on('error', (err) => {
     console.warn('[updater]', err);
   });
 
   autoUpdater.on('update-downloaded', (event) => {
+    updateDownloaded = true;
     void dialog
       .showMessageBox({
         type: 'info',
