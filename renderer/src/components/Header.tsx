@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { CSSProperties } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useService } from '@/hooks/useService';
 import { serviceApi } from '@/lib/api/service';
@@ -22,6 +23,9 @@ export default function Header({ isPeoplePanelOpen, setIsPeoplePanelOpen }: Head
   const [isChecking, setIsChecking] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const isMac = navigator.platform.toUpperCase().includes('MAC');
+  const dragRegionStyle: CSSProperties = { WebkitAppRegion: 'drag' };
+  const noDragRegionStyle: CSSProperties = { WebkitAppRegion: 'no-drag' };
 
   // Cache client list to avoid repeated API calls
   const clientListCache = useRef<string[]>([]);
@@ -172,7 +176,13 @@ export default function Header({ isPeoplePanelOpen, setIsPeoplePanelOpen }: Head
   };
 
   return (
-    <header className="flex items-center justify-between px-6 py-4 bg-linear-to-r from-[#f0fffa] to-[#e6fffa] border-b border-[#80ffdb] shadow-[0_2px_10px_rgba(0,255,136,0.1)]">
+    <header
+      className={cn(
+        'flex items-center justify-between px-6 py-4 bg-linear-to-r from-[#f0fffa] to-[#e6fffa] border-b border-[#80ffdb] shadow-[0_2px_10px_rgba(0,255,136,0.1)]',
+        isMac && 'pt-10'
+      )}
+      style={dragRegionStyle}
+    >
       {/* Logo */}
       <div className="flex items-center gap-3">
         <h1 className="flex items-center gap-2 text-2xl font-semibold text-[#00cc6a]">
@@ -181,7 +191,7 @@ export default function Header({ isPeoplePanelOpen, setIsPeoplePanelOpen }: Head
         </h1>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-6" style={noDragRegionStyle}>
         {/* Client Name Input */}
         <div className="flex items-center gap-2">
           <label htmlFor="clientName" className="text-sm font-semibold text-[#00cc6a]">

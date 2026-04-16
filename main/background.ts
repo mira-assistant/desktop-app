@@ -1,5 +1,5 @@
 import './env';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import path from 'path';
 import { assertBackendMajorCompatible, configureSilentAutoUpdates } from './updater';
 import { api } from '../shared/api/client';
@@ -16,6 +16,13 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1500,
     height: 800,
+    autoHideMenuBar: true,
+    titleBarStyle: 'hidden',
+    ...(process.platform !== 'darwin'
+      ? {
+          titleBarOverlay: false,
+        }
+      : {}),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -32,6 +39,8 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+
+  mainWindow.setMenuBarVisibility(false);
 }
 
 async function deregisterClient(): Promise<void> {
@@ -145,6 +154,8 @@ ipcMain.handle('client:deregister', async () => {
 });
 
 app.whenReady().then(async () => {
+  Menu.setApplicationMenu(null);
+
   const backendOk = await assertBackendMajorCompatible();
   if (!backendOk) {
     app.quit();
