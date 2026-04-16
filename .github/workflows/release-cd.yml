@@ -86,6 +86,7 @@ jobs:
           artifactErrorsFailBuild: true
           omitBodyDuringUpdate: true
           omitNameDuringUpdate: true
-          # Include latest*.yml and *.blockmap so electron-updater can fetch updates from the release.
-          artifacts: assets/windows/*,assets/macos/*
+          # File globs only — release/ also contains win-unpacked/, mac-*/ etc. which ncipollo cannot upload.
+          # Include yml + blockmap for electron-updater.
+          artifacts: assets/windows/*.exe,assets/windows/*.yml,assets/windows/*.blockmap,assets/macos/*.dmg,assets/macos/*.yml,assets/macos/*.blockmap
           token: ${{ secrets.GITHUB_TOKEN }}
