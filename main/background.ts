@@ -1,6 +1,7 @@
 import './env';
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
+import { assertBackendMajorCompatible, configureSilentAutoUpdates } from './updater';
 import { api } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/constants';
 import { TokenStorage } from './auth/token-storage';
@@ -189,7 +190,14 @@ ipcMain.handle('client:deregister', async (__dirname, clientName: string) => {
 // App Lifecycle
 // ============================================================================
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  const backendOk = await assertBackendMajorCompatible();
+  if (!backendOk) {
+    app.quit();
+    return;
+  }
+
+  configureSilentAutoUpdates();
   createWindow();
 
   app.on('activate', () => {

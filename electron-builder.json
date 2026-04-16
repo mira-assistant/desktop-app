@@ -11,6 +11,11 @@
     "output": "release"
   },
   "asar": true,
+  "publish": {
+    "provider": "github",
+    "owner": "mira-assistant",
+    "repo": "desktop-app"
+  },
   "win": {
     "target": "nsis",
     "icon": "resources/icon.png"
